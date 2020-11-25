@@ -1,51 +1,56 @@
-# Makefile for Hadoop MapReduce WordCount demo project.
+# Makefile for Group10 Spark project.
 
 # Customize these paths for your environment.
 # -----------------------------------------------------------
-hadoop.root=/home/joe/tools/hadoop/hadoop-2.9.1
-jar.name=mr-demo-1.0.jar
-jar.path=target/${jar.name}
-job.name=wc.WordCount
-local.input=input
+spark.root=/Users/apriljoy/spark/spark-2.3.1-bin-without-hadoop
+hadoop.root=/Users/apriljoy/hadoop/hadoop-2.9.2
+project.name=group10-project
+app.name=TBD
+jar.name=${project.name}.jar
+maven.jar.name=${project.name}-1.0.jar
+job.name=TBD
+local.master=local[4]
 local.output=output
+local.log=log
 # Pseudo-Cluster Execution
-hdfs.user.name=joe
+hdfs.user.name=group10
 hdfs.input=input
 hdfs.output=output
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
-aws.region=us-east-1
-aws.bucket.name=mr-median
-aws.subnet.id=subnet-6356553a
+aws.bucket.name=group10-${project.name}
 aws.input=input
 aws.output=output
 aws.log.dir=log
-aws.num.nodes=1
-aws.instance.type=m3.xlarge
+aws.num.nodes=5
+aws.instance.type=m5.xlarge
 # -----------------------------------------------------------
 
 # Compiles code and builds jar (with dependencies).
 jar:
 	mvn clean package
+	cp target/${maven.jar.name} ${jar.name}
 
 # Removes local output directory.
 clean-local-output:
 	rm -rf ${local.output}*
 
+# Removes local output directory.
+clean-local-log:
+	rm -rf ${local.log}*
+
 # Runs standalone
-# Make sure Hadoop  is set up (in /etc/hadoop files) for standalone operation (not pseudo-cluster).
-# https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/SingleCluster.html#Standalone_Operation
 local: jar clean-local-output
-	${hadoop.root}/bin/hadoop jar ${jar.path} ${job.name} ${local.input} ${local.output}
+	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.k} ${local.iterations} ${local.output}
 
 # Start HDFS
 start-hdfs:
 	${hadoop.root}/sbin/start-dfs.sh
 
 # Stop HDFS
-stop-hdfs: 
+stop-hdfs:
 	${hadoop.root}/sbin/stop-dfs.sh
-	
+
 # Start YARN
 start-yarn: stop-yarn
 	${hadoop.root}/sbin/start-yarn.sh
@@ -59,36 +64,32 @@ format-hdfs: stop-hdfs
 	rm -rf /tmp/hadoop*
 	${hadoop.root}/bin/hdfs namenode -format
 
-# Initializes user & input directories of HDFS.	
+# Initializes user & input directories of HDFS.
 init-hdfs: start-hdfs
 	${hadoop.root}/bin/hdfs dfs -rm -r -f /user
 	${hadoop.root}/bin/hdfs dfs -mkdir /user
 	${hadoop.root}/bin/hdfs dfs -mkdir /user/${hdfs.user.name}
 	${hadoop.root}/bin/hdfs dfs -mkdir /user/${hdfs.user.name}/${hdfs.input}
 
-# Load data to HDFS
-upload-input-hdfs: start-hdfs
-	${hadoop.root}/bin/hdfs dfs -put ${local.input}/* /user/${hdfs.user.name}/${hdfs.input}
-
 # Removes hdfs output directory.
 clean-hdfs-output:
 	${hadoop.root}/bin/hdfs dfs -rm -r -f ${hdfs.output}*
 
 # Download output from HDFS to local.
-download-output-hdfs: clean-local-output
+download-output-hdfs:
 	mkdir ${local.output}
 	${hadoop.root}/bin/hdfs dfs -get ${hdfs.output}/* ${local.output}
 
 # Runs pseudo-clustered (ALL). ONLY RUN THIS ONCE, THEN USE: make pseudoq
 # Make sure Hadoop  is set up (in /etc/hadoop files) for pseudo-clustered operation (not standalone).
 # https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/SingleCluster.html#Pseudo-Distributed_Operation
-pseudo: jar stop-yarn format-hdfs init-hdfs upload-input-hdfs start-yarn clean-local-output 
-	${hadoop.root}/bin/hadoop jar ${jar.path} ${job.name} ${hdfs.input} ${hdfs.output}
+pseudo: jar stop-yarn format-hdfs init-hdfs start-yarn clean-local-output
+	spark-submit --class ${job.name} --master yarn --deploy-mode cluster ${jar.name} ${local.k} ${local.iterations} ${local.output}
 	make download-output-hdfs
 
 # Runs pseudo-clustered (quickie).
-pseudoq: jar clean-local-output clean-hdfs-output 
-	${hadoop.root}/bin/hadoop jar ${jar.path} ${job.name} ${hdfs.input} ${hdfs.output}
+pseudoq: jar clean-local-output clean-hdfs-output
+	spark-submit --class ${job.name} --master yarn --deploy-mode cluster ${jar.name} ${local.k} ${local.iterations}
 	make download-output-hdfs
 
 # Create S3 bucket.
@@ -98,32 +99,34 @@ make-bucket:
 # Upload data to S3 input dir.
 upload-input-aws: make-bucket
 	aws s3 sync ${local.input} s3://${aws.bucket.name}/${aws.input}
-	
+
 # Delete S3 output dir.
 delete-output-aws:
 	aws s3 rm s3://${aws.bucket.name}/ --recursive --exclude "*" --include "${aws.output}*"
 
 # Upload application to S3 bucket.
 upload-app-aws:
-	aws s3 cp ${jar.path} s3://${aws.bucket.name}
+	aws s3 cp ${jar.name} s3://${aws.bucket.name}
 
 # Main EMR launch.
 aws: jar upload-app-aws delete-output-aws
 	aws emr create-cluster \
-		--name "WordCount MR Cluster" \
+		--name "${project.name} Cluster" \
 		--release-label ${aws.emr.release} \
 		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
-	    --applications Name=Hadoop \
-	    --steps '[{"Args":["${job.name}","s3://${aws.bucket.name}/${aws.input}","s3://${aws.bucket.name}/${aws.output}"],"Type":"CUSTOM_JAR","Jar":"s3://${aws.bucket.name}/${jar.name}","ActionOnFailure":"TERMINATE_CLUSTER","Name":"Custom JAR"}]' \
+	    --applications Name=Hadoop Name=Spark \
+		--steps Type=CUSTOM_JAR,Name="${app.name}",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","${job.name}","s3://${aws.bucket.name}/${jar.name}","s3://${aws.bucket.name}/${aws.input}","s3://${aws.bucket.name}/${aws.output}"] \
 		--log-uri s3://${aws.bucket.name}/${aws.log.dir} \
 		--use-default-roles \
 		--enable-debugging \
 		--auto-terminate
 
 # Download output from S3.
-download-output-aws: clean-local-output
+download-output-aws: clean-local-output clean-local-log
 	mkdir ${local.output}
 	aws s3 sync s3://${aws.bucket.name}/${aws.output} ${local.output}
+	mkdir ${local.log}
+	aws s3 sync s3://${aws.bucket.name}/${aws.log.dir} ${local.log}
 
 # Change to standalone mode.
 switch-standalone:
@@ -135,15 +138,15 @@ switch-pseudo:
 
 # Package for release.
 distro:
-	rm -f MR-Demo.tar.gz
-	rm -f MR-Demo.zip
+	rm -f ${project.name}.tar.gz
+	rm -f ${project.name}.zip
 	rm -rf build
-	mkdir -p build/deliv/MR-Demo
-	cp -r src build/deliv/MR-Demo
-	cp -r config build/deliv/MR-Demo
-	cp -r input build/deliv/MR-Demo
-	cp pom.xml build/deliv/MR-Demo
-	cp Makefile build/deliv/MR-Demo
-	cp README.txt build/deliv/MR-Demo
-	tar -czf MR-Demo.tar.gz -C build/deliv MR-Demo
-	cd build/deliv && zip -rq ../../MR-Demo.zip MR-Demo
+	mkdir -p build/deliv/${project.name}
+	cp -r src build/deliv/${project.name}
+	cp -r config build/deliv/${project.name}
+	cp -r input build/deliv/${project.name}
+	cp pom.xml build/deliv/${project.name}
+	cp Makefile build/deliv/${project.name}
+	cp README.txt build/deliv/${project.name}
+	tar -czf ${project.name}.tar.gz -C build/deliv ${project.name}
+	cd build/deliv && zip -rq ../../${project.name}.zip ${project.name}
