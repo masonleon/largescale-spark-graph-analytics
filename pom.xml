@@ -4,7 +4,7 @@
     <artifactId>group10-project</artifactId>
     <packaging>jar</packaging>
     <version>1.0</version>
-    <name>group10-projec</name>
+    <name>group10-project</name>
     <properties>
         <encoding>UTF-8</encoding>
         <scala.version>2.11.12</scala.version>
