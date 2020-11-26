@@ -4,25 +4,9 @@ import org.apache.spark.{SparkConf, SparkContext}
 object ShortestPaths {
 
   /**
-    * A path from original departure airport to final arrival airport.
-    * @param start airport ID for original departure airport for this path
-    * @param end airport ID for final arrival airport for this path
+    * Number of iterations.
     */
-  // I envision using this as a key.  We will need a Path for every combination of airports.
-  // Two path keys would be equivalent if k1.start == k2.start AND k1.end == k2.end
-  // TODO how to codify equivalence?  Is there like an equals method for case classes?
-  case class Path(start: String, end: String)
-
-  /**
-    * A complete route for a given path from original arrival airport to final destination airport.
-    * @param path Path indicating original departure and final arrival airport IDs
-    * @param totalDistance cumulative distance for this route so far
-    * @param intermediates ordered list of all intermediate airport IDs for this route so far
-    * @param isComplete true if the route is complete from departure to arrival; false otherwise
-    */
-  // Each Path would use a Route to build up the shortest path
-  case class Route(path: Path, totalDistance: Int, intermediates: List[String], isComplete: Boolean)
-
+  val k: Int = 2      // TODO is there a better way to make sure the graph converges other than running |V| iterations?
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -34,25 +18,59 @@ object ShortestPaths {
     val conf = new SparkConf().setAppName("PageRank")
     val sc = new SparkContext(conf)
 
-    // Graph structure:  (departID, List[(arrivalID, distance)])
-    // Graph structure is static --> persist or cache
+
     // Input file: (departID, arrivalID, distance)
+    // Transform to...
+    // Graph structure:  (departID, List[(arrivalID, weight)])
+    // Graph structure is static --> persist or cache
     val graph = sc.textFile(args(0))
       .map { line =>
-        val tokens = line.split(",")  //TODO confirm file format as csv?
-        val departID = tokens(0)
+        val tokens = line.split(",") //TODO confirm file format as csv?
+      val departID = tokens(0)
         val arrivalID = tokens(1)
-        val distance = tokens(2).toInt
-        (departID, arrivalID, distance)
-      }                                             // If there are multiple flights for same route, they *should be* same distance (although I'm not sure that they always will be in the input data)
-      .groupBy{ case (dep,arr, _) => (dep, arr)}    // Get all flights with same dep/arr together
-      .mapValues(flights => flights(0))             // Take one representative flight for each
-      .map { case ((dep, arr), dist: Int) =>
-        (dep, (arr, dist))
+        val weight = tokens(2).toInt
+        (departID, arrivalID, weight)
+      } // If there are multiple flights for same route, they *should be* same distance (although I'm not sure that they always will be in the input data)
+      .groupBy { case (dep, arr, _) => (dep, arr) } // Get all flights with same dep/arr together
+      .mapValues(flights => flights(0)) // Take one representative flight for each
+      .map { case ((dep, arr), wt: Int) =>
+      (dep, (arr, wt))
     }
       .groupByKey()
       .cache()
+
+    // Distances structure: (aiportID, totalDistance to get here)
+    // This data will change each iteration
+    // Initially the totalDistance will be the minimum distance from any starting airport
+    var distances = graph.values
+      .flatMap(flight => flight)
+      .groupByKey()
+      .mapValues(distances => distances.min)
+
+    // How to calculate the shortest path?
+    // All departure airports are in the graph.  If there exists a shortest path to anywhere, it must start at a dep airport in the graph
+    // On a shortest path, for all nodes in the route, the path is also the shortest path for those nodes
+    // So we really just need to build up the routes from every possible starting location?
+    // And then after convergence go through and output the final results?  How?
+    // Will every node get covered?
+    // How could we keep track of the route for each path?
+
+    for (iteration <- 0 to k) {
+      val temp = graph.join(distances)    // (airportID, ajList, totalDistance)
+        .flatMap{ case (id, (adjFlights, totalDistance)) => updateDistances(id, adjFlights, totalDistance)}
+        .reduceByKey((x, y) => Math.min(x, y))    // Only keep min distance for any airport
+    }
   }
 
-
+  /**
+    * For all flights departing from origin airport to arrival airport, return arrival ID along with cumulative distance from origin airport.
+    * Also return origin ID with its original distance to maintain this data in the distances dataset.
+    * @param originId ID of origin airport
+    * @param adjFlights all (arrival ID, weight) for flights departing from origin airport
+    * @param distance cumulative distance to origin airport
+    * @return iterable of (airportID, cumulativeDistance) including origin and all its adjacent airports
+    */
+  def updateDistances(originId: String, adjFlights: Iterable[(String, Int)], distance: Int): Iterable[(String, Int)] = {
+    adjFlights.map { case (id, wt) => (id, wt + distance)} ++ List((originId, distance))
+  }
 }
