@@ -35,7 +35,7 @@ object ShortestPaths {
     val sc = new SparkContext(conf)
 
     // Graph structure:  (departID, List[(arrivalID, distance)])
-    // Graph structure is static --> persist or chache
+    // Graph structure is static --> persist or cache
     // Input file: (departID, arrivalID, distance)
     val graph = sc.textFile(args(0))
       .map { line =>
@@ -44,13 +44,14 @@ object ShortestPaths {
         val arrivalID = tokens(1)
         val distance = tokens(2).toInt
         (departID, arrivalID, distance)
-      }
+      }                                             // If there are multiple flights for same route, they *should be* same distance (although I'm not sure that they always will be in the input data)
       .groupBy{ case (dep,arr, _) => (dep, arr)}    // Get all flights with same dep/arr together
       .mapValues(flights => flights(0))             // Take one representative flight for each
       .map { case ((dep, arr), dist: Int) =>
         (dep, (arr, dist))
     }
       .groupByKey()
+      .cache()
   }
 
 
