@@ -35,11 +35,12 @@ object ShortestPaths {
       .groupByKey()
       .cache()
 
-    // Distances structure: (userID, distance)
+    // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
     // Set all distances for "first hop" to 1
-    var distances = graph.values // List[(friendID)]
-      .flatMap(friends => friends.map(id => (id, edgeWeight)))
+    var distances = graph.flatMap { case (fromId, adjList) =>
+      adjList.map(adjId => (adjId, (fromId, edgeWeight)))
+    }
 
 
     // How to calculate the shortest path?
@@ -50,25 +51,28 @@ object ShortestPaths {
     // Will every node get covered?
 
     for (iteration <- 0 to k) {
-      distances = graph.rightOuterJoin(distances) // (userID, (Option[adjList], distance))
-        .flatMap {
-        case (id, (Some(adjList), distance)) => updateDistances(id, adjList, distance)
-        case (id, (None, distance)) => List((id, distance))
-      }
-        .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any user
+      distances = graph.rightOuterJoin(distances) // (toId, (Option[adjList], (fromId, distance)))
+        .flatMap(x => updateDistances(x))
+        .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
+          .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
     distances.saveAsTextFile(args(1))
   }
 
   /**
-    * Pass the distance from given user to all of its adjacent nodes.
+    * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
+    * the current node.  Returns current distance info for current node with updated distance info
+    * for all of its adjacent nodes.
     *
-    * @param userID   ID for this user
-    * @param adjList  Iterable containing IDs for this user's adjacent nodes
-    * @param distance total distance to this user
-    * @return Iterable of (userID, distance) for this user and all of its adjacent nodes.
+    * @param tuple representing (toId, (adjList, (fromId, distance)))
+    * @return Iterable representing updated ((toId, fromId), distance)
     */
-  def updateDistances(userID: String, adjList: Iterable[String], distance: Int): Iterable[(String, Int)] = {
-    adjList.map(id => (id, edgeWeight + distance)) ++ List((userID, distance))
+  def updateDistances(tuple: (String, (Option[Iterable[String]], (String, Int)))):
+  Iterable[((String, String), Int)] = {
+    tuple match {
+      case (toId, (Some(adjList), (fromId, distance))) =>
+        adjList.map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
+      case (toId, (None, (fromId, distance))) => List(((toId, fromId), distance))
+    }
   }
 }
