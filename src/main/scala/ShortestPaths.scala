@@ -6,7 +6,7 @@ object ShortestPaths {
   /**
     * Number of iterations.
     */
-  val k = 2 // TODO is there a better way to make sure the graph converges other than running |V| iterations?
+  val k = 4 // TODO is there a better way to make sure the graph converges other than running |V| iterations?
   /**
     * Weight for each edge connecting vertices in the graph.
     */
@@ -14,8 +14,8 @@ object ShortestPaths {
 
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
-    if (args.length != 3) {
-      logger.error("Usage:\nShortestPaths <input> <num iterations> <output dir>")
+    if (args.length != 2) {
+      logger.error("Usage:\nShortestPaths <input> <output dir>")
       System.exit(1)
     }
 
@@ -28,7 +28,7 @@ object ShortestPaths {
     // Graph structure is static --> persist or cache
     val graph = sc.textFile(args(0))
       .map { line =>
-        val tokens = line.split("\t")
+        val tokens = line.split(" ")
 
         (tokens(0), tokens(1))
       }
@@ -50,13 +50,14 @@ object ShortestPaths {
     // Will every node get covered?
 
     for (iteration <- 0 to k) {
-      val temp = graph.rightOuterJoin(distances) // (userID, (Option[adjList], distance))
+      distances = graph.rightOuterJoin(distances) // (userID, (Option[adjList], distance))
         .flatMap {
         case (id, (Some(adjList), distance)) => updateDistances(id, adjList, distance)
         case (id, (None, distance)) => List((id, distance))
       }
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any user
     }
+    distances.saveAsTextFile(args(1))
   }
 
   /**

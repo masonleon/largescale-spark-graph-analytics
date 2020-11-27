@@ -5,11 +5,12 @@
 spark.root=/Users/apriljoy/spark/spark-2.3.1-bin-without-hadoop
 hadoop.root=/Users/apriljoy/hadoop/hadoop-2.9.2
 project.name=group10-project
-app.name=TBD
+app.name=ShortestPaths
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
-job.name=TBD
+job.name=ShortestPaths
 local.master=local[4]
+local.input=input
 local.output=output
 local.log=log
 # Pseudo-Cluster Execution
@@ -41,7 +42,7 @@ clean-local-log:
 
 # Runs standalone
 local: jar clean-local-output
-	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.k} ${local.iterations} ${local.output}
+	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.input} ${local.output}
 
 # Start HDFS
 start-hdfs:
