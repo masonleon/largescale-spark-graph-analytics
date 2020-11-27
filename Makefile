@@ -215,24 +215,34 @@ distro:
 	tar -czf ${project.name}.tar.gz -C build/deliv ${project.name}
 	cd build/deliv && zip -rq ../../${project.name}.zip ${project.name}
 
-docker-build-local-container:
-	if [[ "$(docker images -q ${container.base}/${container.base.img}:latest 2> /dev/null)" != "" ]]; then \
-		docker rmi ${container.base}/${container.base.img}:latest; \
-	fi
-	docker build \
-		--tag ${container.base}/${container.name} \
-		--target ${container.name} \
-		.
+#build-container-local:
+#	if [[ "$(docker images -q ${container.base}/${container.base.img}:latest 2> /dev/null)" != "" ]]; then \
+#		docker rmi ${container.base}/${container.base.img}:latest; \
+#	fi
+#	docker build \
+#		--tag ${container.base}/${container.name} \
+#		--target ${container.name} \
+#		.
 
-docker-run-local-container: jar clean-local-output docker-build-local-container
+#run-container-local: jar clean-local-output build-container-local
+#	docker run \
+#		-it \
+#		--rm \
+#		-p 50070:50070 \
+#		-p 8088:8088 \
+#		-p 9870:9870 \
+#		-p 9864:9864 \
+#		-v ${PWD}/input:/input/ \
+#		-v ${PWD}/output:/result/ \
+#		--name=${container.name} \
+#		${container.base}/${container.name}:latest
+
+run-container-spark-jupyter-almond:
 	docker run \
 		-it \
 		--rm \
-		-p 50070:50070 \
-		-p 8088:8088 \
-		-p 9870:9870 \
-		-p 9864:9864 \
-		-v ${PWD}/input:/input/ \
-		-v ${PWD}/output:/result/ \
-		--name=${container.name} \
-		${container.base}/${container.name}:latest
+		-p 8888:8888 \
+		-v ${PWD}/notebooks:/home/jovyan/notebooks \
+		--name=spark-jupyter-almond \
+		almondsh/almond:0.6.0-scala-2.11.12
+
