@@ -5,10 +5,6 @@ import org.apache.spark.{SparkConf, SparkContext}
 object ShortestPaths {
 
   /**
-   * Number of iterations.
-   */
-  val k = 4 // TODO is there a better way to make sure the graph converges other than running |V| iterations?
-  /**
    * Weight for each edge connecting vertices in the graph.
    */
   val edgeWeight = 1
@@ -28,6 +24,8 @@ object ShortestPaths {
     // Graph structure:  (userID, List[(friends)])
     // Graph structure is static --> persist or cache
     val graph = generateGraphRDD(sc, args(0), " ")
+
+    val k = getK(graph)
 
     // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
@@ -70,7 +68,6 @@ object ShortestPaths {
     }
   }
 
-
   /**
    * Generate a graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
    * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
@@ -93,5 +90,18 @@ object ShortestPaths {
       .cache()
 
     graph
+  }
+
+  /**
+   * Get number of iterations. K = |V|.
+   *
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   *
+   * @return k number of iterations for graph convergence.
+   */
+  def getK(GraphRDD: RDD[(String, Iterable[String])]): Int = {
+    val k = GraphRDD.count().toInt
+
+    k
   }
 }
