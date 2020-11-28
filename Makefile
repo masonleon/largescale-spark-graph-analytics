@@ -151,3 +151,14 @@ distro:
 	cp README.txt build/deliv/${project.name}
 	tar -czf ${project.name}.tar.gz -C build/deliv ${project.name}
 	cd build/deliv && zip -rq ../../${project.name}.zip ${project.name}
+
+run-container-spark-jupyter-almond:
+	docker run \
+		-it \
+		--rm \
+		-p 8888:8888 \
+		-v ${PWD}/notebooks:/home/jovyan/notebooks \
+		-v ${PWD}/input:/home/jovyan/input \
+		--name=spark-jupyter-almond \
+		almondsh/almond:0.6.0-scala-2.11.12
+
