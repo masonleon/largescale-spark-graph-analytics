@@ -56,6 +56,7 @@ object ShortestPaths {
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
           .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
+
     distances.saveAsTextFile(args(1))
   }
 
@@ -74,5 +75,6 @@ object ShortestPaths {
         adjList.map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
       case (toId, (None, (fromId, distance))) => List(((toId, fromId), distance))
     }
-  }
+  }.filter { case ((toId, fromId), _) => !toId.equals(fromId) } // Don't keep circular distances
+  //TODO incorporate filter logic in the match statement to make more efficient?
 }
