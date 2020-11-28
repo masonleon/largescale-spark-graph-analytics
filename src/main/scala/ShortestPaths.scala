@@ -1,15 +1,16 @@
 import org.apache.log4j.LogManager
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
 object ShortestPaths {
 
   /**
-    * Number of iterations.
-    */
+   * Number of iterations.
+   */
   val k = 4 // TODO is there a better way to make sure the graph converges other than running |V| iterations?
   /**
-    * Weight for each edge connecting vertices in the graph.
-    */
+   * Weight for each edge connecting vertices in the graph.
+   */
   val edgeWeight = 1
 
   def main(args: Array[String]): Unit = {
@@ -26,14 +27,7 @@ object ShortestPaths {
     // Transform to...
     // Graph structure:  (userID, List[(friends)])
     // Graph structure is static --> persist or cache
-    val graph = sc.textFile(args(0))
-      .map { line =>
-        val tokens = line.split(" ")
-
-        (tokens(0), tokens(1))
-      }
-      .groupByKey()
-      .cache()
+    val graph = generateGraph(sc, args(0), " ")
 
     // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
@@ -54,19 +48,19 @@ object ShortestPaths {
       distances = graph.rightOuterJoin(distances) // (toId, (Option[adjList], (fromId, distance)))
         .flatMap(x => updateDistances(x))
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
-          .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
+        .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
     distances.saveAsTextFile(args(1))
   }
 
   /**
-    * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
-    * the current node.  Returns current distance info for current node with updated distance info
-    * for all of its adjacent nodes.
-    *
-    * @param tuple representing (toId, (adjList, (fromId, distance)))
-    * @return Iterable representing updated ((toId, fromId), distance)
-    */
+   * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
+   * the current node.  Returns current distance info for current node with updated distance info
+   * for all of its adjacent nodes.
+   *
+   * @param tuple representing (toId, (adjList, (fromId, distance)))
+   * @return Iterable representing updated ((toId, fromId), distance)
+   */
   def updateDistances(tuple: (String, (Option[Iterable[String]], (String, Int)))):
   Iterable[((String, String), Int)] = {
     tuple match {
@@ -74,5 +68,30 @@ object ShortestPaths {
         adjList.map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
       case (toId, (None, (fromId, distance))) => List(((toId, fromId), distance))
     }
+  }
+
+
+  /**
+   * Generate a graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
+   * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
+   * each edge is record in text file of v1 -> v2.
+   *
+   * @param context representing SparkContext
+   * @param inputFile representing argument for input file
+   * @param separator representing the separator character such as ",", " ", "|", etc.
+   * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
+   */
+  def generateGraph(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
+
+    val graph = context.textFile(inputFile)
+      .map { line =>
+        val tokens = line.split(separator)
+
+        (tokens(0), tokens(1))
+      }
+      .groupByKey()
+      .cache()
+
+    graph
   }
 }
