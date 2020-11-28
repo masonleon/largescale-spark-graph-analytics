@@ -27,7 +27,7 @@ object ShortestPaths {
     // Transform to...
     // Graph structure:  (userID, List[(friends)])
     // Graph structure is static --> persist or cache
-    val graph = generateGraph(sc, args(0), " ")
+    val graph = generateGraphRDD(sc, args(0), " ")
 
     // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
@@ -81,7 +81,7 @@ object ShortestPaths {
    * @param separator representing the separator character such as ",", " ", "|", etc.
    * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
    */
-  def generateGraph(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
+  def generateGraphRDD(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
 
     val graph = context.textFile(inputFile)
       .map { line =>
