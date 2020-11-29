@@ -19,6 +19,8 @@ object ShortestPaths {
     val conf = new SparkConf().setAppName("ShortestPaths")
     val sc = new SparkContext(conf)
 
+    // TODO use same partitioner for graph and distances to reduce shuffling during join
+
     // Input file: (userID, friendID)
     // Transform to...
     // Graph structure:  (userID, List[(friends)])
@@ -34,7 +36,6 @@ object ShortestPaths {
       adjList.map(adjId => (adjId, (fromId, edgeWeight)))
     }
 
-
     // How to calculate the shortest path?
     // All origin userIDs are nodes in the graph.  If there exists a shortest path to anywhere, it must start at an ID in the graph
     // On a shortest path, for all nodes in the path, the path is also the shortest path for those nodes
@@ -48,12 +49,12 @@ object ShortestPaths {
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
         .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
+
 //    distances.saveAsTextFile(args(1))
-    distances
 
-    val output = getDiameter(sc, distances)
+    val diameter = getDiameter(sc, distances)
 
-    output
+    diameter
       .coalesce(1)
       .saveAsTextFile(args(1))
   }
@@ -73,7 +74,9 @@ object ShortestPaths {
         adjList.map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
       case (toId, (None, (fromId, distance))) => List(((toId, fromId), distance))
     }
-  }
+  }.filter { case ((toId, fromId), _) => !toId.equals(fromId) } // Don't keep circular distances
+  //TODO incorporate filter logic in the match statement to make more efficient?
+
 
   /**
    * Generate a graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
@@ -82,15 +85,13 @@ object ShortestPaths {
    *
    * @param context representing SparkContext
    * @param inputFile representing argument for input file
-   * @param separator representing the separator character such as ",", " ", "|", etc.
+   * @param separator representing the separator character such as ",", " ", "|", etc.*
    * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
    */
   def generateGraphRDD(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
-
     val graph = context.textFile(inputFile)
       .map { line =>
         val tokens = line.split(separator)
-
         (tokens(0), tokens(1))
       }
       .groupByKey()
@@ -103,7 +104,6 @@ object ShortestPaths {
    * Get number of iterations. K = |V|.
    *
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   *
    * @return k number of iterations for graph convergence.
    */
   def getK(GraphRDD: RDD[(String, Iterable[String])]): Int = {
@@ -112,15 +112,21 @@ object ShortestPaths {
     k
   }
 
-  def getDiameter(context: SparkContext, graph: RDD[(String, (String, Int))]) = {
-//  def getDiameter(graph: RDD[(String, (String, Int))]): Int = {
-
+  /**
+   * Get number of iterations. K = |V|.
+   *
+   * @param context representing SparkContext
+   * @param DistancesRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   *
+   * @return k number of iterations for graph convergence.
+   */
+  def getDiameter(context: SparkContext, DistancesRDD: RDD[(String, (String, Int))]) = {
 //    val diameter = graph
 //      .collect
 //      .maxBy(_._2._2)
 //      .collect.maxBy(_._2)
 
-    val diameter = graph
+    val diameter = DistancesRDD
       .sortBy(_._2._2,ascending = false)
       .take(1)
 

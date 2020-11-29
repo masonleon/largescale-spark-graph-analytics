@@ -25,7 +25,7 @@ hs_err_pid*
 .idea/
 *.iml
 
-*.ipynb_checkpoints
-
-notebooks/spark-warehouse/
 target/
+
+*.ipynb_checkpoints
+notebooks/spark-warehouse/
