@@ -16,18 +16,20 @@ object GraphConnectedness {
 
     val graph = data.map(line => line.split("\t"))
       .map(d => (d(0), d(1)))
+      .groupByKey()
+      .persist()
+
+    //TODO use same partitioner to avoid reshuffling
 
     // initialize all edges to not visited (0)
     val nodes = graph.flatMap({
-        case (node, adjList) => adjList.map(adjID => ((node, adjID), 0))
+        case (node, adjList) => adjList.map(adjID => (node, (adjID, 0)))
       }
     )
 
-    // use same partitioner to avoid reshuffling
-    nodes.persist()
-
     // implement DFS
 
-    nodes.saveAsTextFile("output")
+
+    nodes.saveAsTextFile("ConnectednessOutput")
   }
 }
