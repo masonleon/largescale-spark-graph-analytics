@@ -25,12 +25,17 @@ aws.output=output
 aws.log.dir=log
 aws.num.nodes=5
 aws.instance.type=m5.xlarge
+
+container.name=spark-assp
+container.base=cs6240
+container.base.img=spark
 # -----------------------------------------------------------
 
 # Compiles code and builds jar (with dependencies).
 jar:
 	mvn clean package
 	cp target/${maven.jar.name} ${jar.name}
+	#rm -rf target/${maven.jar.name}
 
 # Removes local output directory.
 clean-local-output:
@@ -161,4 +166,51 @@ run-container-spark-jupyter-almond:
 		-v ${PWD}/input:/home/jovyan/input \
 		--name=spark-jupyter-almond \
 		almondsh/almond:0.6.0-scala-2.11.12
+
+entry-container-spark-jar-local:
+	echo "#!/bin/bash \n\nspark-submit --class ${job.name} --master ${local.master} --name \"${app.name}\" ${jar.name} ${local.input} ${local.output}\ncp -a /output/* /result/\n" > docker/local.sh
+
+build-container-base:
+	if [[ "$(docker images -q cs6240/hadoop:latest 2> /dev/null)" != "" ]]; then \
+		docker rmi cs6240/hadoop:latest; \
+	fi; \
+	if [[ "$(docker images -q cs6240/spark:latest 2> /dev/null)" != "" ]]; then \
+    	docker rmi cs6240/spark:latest; \
+    fi; \
+    docker build \
+    	--tag cs6240/hadoop \
+    	--target hadoop \
+    	./docker/hadoop-spark/ && \
+    docker build \
+    	--tag cs6240/spark \
+    	--target spark \
+    	./docker/hadoop-spark/
+
+build-container-spark-jar-local: rm-xml-jar-docker jar build-container-base entry-container-spark-jar-local clean-local-output clean-local-log
+	if [[ "$(docker images -q ${container.base}/${container.base.img}:latest 2> /dev/null)" != "" ]]; then \
+			docker rmi ${container.base}/${container.base.img}:latest; \
+	fi; \
+	cp config/standalone/*.xml docker/
+	cp ${jar.name} docker/
+	docker build \
+		--tag ${container.base}/${container.name} \
+		--target ${container.name} \
+		./docker/
+
+run-container-spark-jar-local: build-container-spark-jar-local
+	docker run \
+            -it \
+            --rm \
+            -p 50070:50070 \
+            -p 8088:8088 \
+            -p 9870:9870 \
+            -p 9864:9864 \
+            -v ${PWD}/input:/input/ \
+            -v ${PWD}/output:/result/ \
+            --name=${container.name} \
+            ${container.base}/${container.name}:latest
+
+rm-xml-jar-docker:
+	rm -rf docker/*.xml
+	rm -rf docker/*.jar
 
