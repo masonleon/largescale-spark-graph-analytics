@@ -2,7 +2,7 @@ import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
-object GraphConnectedness {
+object GraphStats {
   def main(args: Array[String]): Unit = {
 
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -21,21 +21,27 @@ object GraphConnectedness {
 
     //TODO use same partitioner to avoid reshuffling
 
-    // initialize all edges not visited to 0
-    val nodes = graph.flatMap({
-        case (node, adjList) => adjList.map(adjID => (node, (adjID, 0)))
-      }
-    )
-
+    // starting node
     var active:RDD[(String, Int)] = sc.parallelize(Seq(("0",1)))
 
     // implement BFS to traverse all connected users
     for(iteration <- 1 to 4){
       active = graph.join(active)
-        .flatMap({ case (id, (adjList, dummy)) => adjList.map(x => (x,1))
+        .flatMap({ case (id, (adjList, dummy)) => adjList.map(x => (x, 1))
         })
         .reduceByKey((x,y) => x)
     }
+
+    /**
+     * Pseudo-Code for Diameter + Largest Cycle
+     * Diameter -- takes all-pairs solution from ShortestPaths.scala and finds the path with max distance --
+     *
+     * Largest Cycle
+     * iterative solution similar to triangles to start
+     * var path = data.join(reverse_data)
+     * var cycle = path.filter(matching keys) // iter1
+     * continue iterations until path no longer grows
+     */
 
     active.saveAsTextFile("GraphConnectednessOutput")
   }
