@@ -2,8 +2,8 @@
 
 # Customize these paths for your environment.
 # -----------------------------------------------------------
-spark.root=/Users/apriljoy/spark/spark-2.3.1-bin-without-hadoop
-hadoop.root=/Users/apriljoy/hadoop/hadoop-2.9.2
+spark.root=${SPARK_HOME}
+hadoop.root=${HADOOP_HOME}
 project.name=group10-project
 app.name=ShortestPaths
 jar.name=${project.name}.jar
