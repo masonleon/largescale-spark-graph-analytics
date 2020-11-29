@@ -27,12 +27,34 @@ object ShortestPaths {
     // Graph structure is static --> persist or cache
     val graph = generateGraphRDD(sc, args(0), " ")
 
-    val k = getK(graph)
+
+
+//    distances.saveAsTextFile(args(1))
+
+    val diameter = getDiameter(sc, graph)
+
+    diameter
+      .coalesce(1)
+      .saveAsTextFile(args(1))
+  }
+
+  /**
+   * Generate a graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
+   * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
+   * each edge is record in text file of v1 -> v2.
+   *
+   * @param context   representing SparkContext
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   * @param separator representing the separator character such as ",", " ", "|", etc.*
+   * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
+   */
+  def asspRDD(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])], separator: String): RDD[(String, (String, Int))] = {
+    val k = getK(GraphRDD)
 
     // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
     // Set all distances for "first hop" to 1
-    var distances = graph.flatMap { case (fromId, adjList) =>
+    var distances = GraphRDD.flatMap { case (fromId, adjList) =>
       adjList.map(adjId => (adjId, (fromId, edgeWeight)))
     }
 
@@ -42,21 +64,14 @@ object ShortestPaths {
     // So we really just need to build up the paths from every possible starting ID?
     // And then after convergence go through and output the final results?  How?
     // Will every node get covered?
-
     for (iteration <- 0 to k) {
-      distances = graph.rightOuterJoin(distances) // (toId, (Option[adjList], (fromId, distance)))
+      distances = GraphRDD.rightOuterJoin(distances) // (toId, (Option[adjList], (fromId, distance)))
         .flatMap(x => updateDistances(x))
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
         .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
 
-//    distances.saveAsTextFile(args(1))
-
-    val diameter = getDiameter(sc, distances)
-
-    diameter
-      .coalesce(1)
-      .saveAsTextFile(args(1))
+    distances
   }
 
   /**
@@ -76,7 +91,6 @@ object ShortestPaths {
     }
   }.filter { case ((toId, fromId), _) => !toId.equals(fromId) } // Don't keep circular distances
   //TODO incorporate filter logic in the match statement to make more efficient?
-
 
   /**
    * Generate a graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
