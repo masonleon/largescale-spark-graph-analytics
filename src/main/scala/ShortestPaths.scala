@@ -22,6 +22,8 @@ object ShortestPaths {
     val conf = new SparkConf().setAppName("ShortestPaths")
     val sc = new SparkContext(conf)
 
+    // TODO use same partitioner for graph and distances to reduce shuffling during join
+
     // Input file: (userID, friendID)
     // Transform to...
     // Graph structure:  (userID, List[(friends)])
