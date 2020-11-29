@@ -14,13 +14,13 @@ object GraphConnectedness {
     val sc = new SparkContext(conf)
     val data = sc.textFile(args(0))
 
-    val res = data.map(line => line.split("\t"))
+    val graph = data.map(line => line.split("\t"))
       .map(d => (d(0), d(1)))
-      .groupByKey()
-      .map(x => (x._1, x._2.toList))
-      .sortByKey()
 
-    res.saveAsTextFile("output")
+    // use same partitioner to avoid reshuffling
+    graph.persist()
+
+    graph.saveAsTextFile("output")
 
     // implement DFS
 
