@@ -48,7 +48,14 @@ object ShortestPaths {
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
         .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
-    distances.saveAsTextFile(args(1))
+//    distances.saveAsTextFile(args(1))
+    distances
+
+    val output = getDiameter(sc, distances)
+
+    output
+      .coalesce(1)
+      .saveAsTextFile(args(1))
   }
 
   /**
@@ -103,5 +110,20 @@ object ShortestPaths {
     val k = GraphRDD.count().toInt
 
     k
+  }
+
+  def getDiameter(context: SparkContext, graph: RDD[(String, (String, Int))]) = {
+//  def getDiameter(graph: RDD[(String, (String, Int))]): Int = {
+
+//    val diameter = graph
+//      .collect
+//      .maxBy(_._2._2)
+//      .collect.maxBy(_._2)
+
+    val diameter = graph
+      .sortBy(_._2._2,ascending = false)
+      .take(1)
+
+    context.parallelize(diameter)
   }
 }
