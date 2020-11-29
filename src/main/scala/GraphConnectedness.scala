@@ -17,13 +17,17 @@ object GraphConnectedness {
     val graph = data.map(line => line.split("\t"))
       .map(d => (d(0), d(1)))
 
-    // use same partitioner to avoid reshuffling
-    graph.persist()
+    // initialize all edges to not visited (0)
+    val nodes = graph.flatMap({
+        case (node, adjList) => adjList.map(adjID => ((node, adjID), 0))
+      }
+    )
 
-    graph.saveAsTextFile("output")
+    // use same partitioner to avoid reshuffling
+    nodes.persist()
 
     // implement DFS
 
-
+    nodes.saveAsTextFile("output")
   }
 }
