@@ -21,15 +21,15 @@ object GraphConnectedness {
 
     //TODO use same partitioner to avoid reshuffling
 
-    // initialize all edges to not visited (0)
+    // initialize all edges not visited to 0
     val nodes = graph.flatMap({
         case (node, adjList) => adjList.map(adjID => (node, (adjID, 0)))
       }
     )
 
-    // implement DFS
+    // implement BFS/DFS to traverse all connected users
 
 
-    nodes.saveAsTextFile("ConnectednessOutput")
+    nodes.saveAsTextFile("GraphConnectednessOutput")
   }
 }
