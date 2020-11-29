@@ -39,16 +39,13 @@ object ShortestPaths {
   }
 
   /**
-   * Generate a graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
-   * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
-   * each edge is record in text file of v1 -> v2.
+   * All-Pairs-Shortest-Path
    *
-   * @param context   representing SparkContext
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   * @param separator representing the separator character such as ",", " ", "|", etc.*
-   * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
+   *
+   * @return distances representing all-pairs-shortest-paths for graph G in RDD format as RDD[(V_to, List[(V_from, Dist)])])
    */
-  def asspRDD(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])], separator: String): RDD[(String, (String, Int))] = {
+  def asspRDD(GraphRDD: RDD[(String, Iterable[String])]): RDD[(String, (String, Int))] = {
     val k = getK(GraphRDD)
 
     // Distances structure: (toId, (fromId, distance))
