@@ -43,15 +43,15 @@ object ShortestPaths {
    *
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
    *
-   * @return distances representing all-pairs-shortest-paths for graph G in RDD format as RDD[(V_to, List[(V_from, Dist)])])
+   * @return DistancesRDD representing all-pairs-shortest-paths for graph G in RDD format as RDD[(V_to, List[(V_from, Dist)])])
    */
-  def asspRDD(GraphRDD: RDD[(String, Iterable[String])]): RDD[(String, (String, Int))] = {
+  def asspRDD(GraphRDD: RDD[(String, Iterable[String])]) = {
     val k = getK(GraphRDD)
 
     // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
     // Set all distances for "first hop" to 1
-    var distances = GraphRDD.flatMap { case (fromId, adjList) =>
+    var DistancesRDD = GraphRDD.flatMap { case (fromId, adjList) =>
       adjList.map(adjId => (adjId, (fromId, edgeWeight)))
     }
 
@@ -62,13 +62,13 @@ object ShortestPaths {
     // And then after convergence go through and output the final results?  How?
     // Will every node get covered?
     for (iteration <- 0 to k) {
-      distances = GraphRDD.rightOuterJoin(distances) // (toId, (Option[adjList], (fromId, distance)))
+      DistancesRDD = GraphRDD.rightOuterJoin(DistancesRDD) // (toId, (Option[adjList], (fromId, distance)))
         .flatMap(x => updateDistances(x))
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
         .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
 
-    distances
+    DistancesRDD
   }
 
   /**
@@ -127,18 +127,21 @@ object ShortestPaths {
    * Get number of iterations. K = |V|.
    *
    * @param context representing SparkContext
-   * @param DistancesRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
    *
    * @return k number of iterations for graph convergence.
    */
-  def getDiameter(context: SparkContext, DistancesRDD: RDD[(String, (String, Int))]) = {
+  def getDiameter(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]) = {
+
+    val DistancesRDD = asspRDD(GraphRDD)
+
 //    val diameter = graph
 //      .collect
 //      .maxBy(_._2._2)
 //      .collect.maxBy(_._2)
 
     val diameter = DistancesRDD
-      .sortBy(_._2._2,ascending = false)
+      .sortBy(_._2._2, ascending = false)
       .take(1)
 
     context.parallelize(diameter)
