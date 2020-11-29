@@ -13,10 +13,12 @@ local.master=local[4]
 local.input=input
 local.output=output
 local.log=log
+
 # Pseudo-Cluster Execution
 hdfs.user.name=group10
 hdfs.input=input
 hdfs.output=output
+
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
 aws.bucket.name=group10-${project.name}
@@ -26,9 +28,15 @@ aws.log.dir=log
 aws.num.nodes=5
 aws.instance.type=m5.xlarge
 
+# Docker Execution
 container.name=spark-assp
 container.base=cs6240
 container.base.img=spark
+#docker.notebooks=notebooks
+#docker.container.name=
+#docker.container.base=
+#docker.container.base.img=
+
 # -----------------------------------------------------------
 
 # Compiles code and builds jar (with dependencies).
@@ -47,7 +55,13 @@ clean-local-log:
 
 # Runs standalone
 local: jar clean-local-output
-	spark-submit --class ${job.name} --master ${local.master} --name "${app.name}" ${jar.name} ${local.input} ${local.output}
+	spark-submit \
+		--class ${job.name} \
+		--master ${local.master} \
+		--name "${app.name}" \
+		${jar.name} \
+			${local.input} \
+			${local.output}
 
 # Start HDFS
 start-hdfs:
@@ -90,49 +104,96 @@ download-output-hdfs:
 # Make sure Hadoop  is set up (in /etc/hadoop files) for pseudo-clustered operation (not standalone).
 # https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/SingleCluster.html#Pseudo-Distributed_Operation
 pseudo: jar stop-yarn format-hdfs init-hdfs start-yarn clean-local-output
-	spark-submit --class ${job.name} --master yarn --deploy-mode cluster ${jar.name} ${local.k} ${local.iterations} ${local.output}
+	spark-submit \
+		--class ${job.name} \
+		--master yarn \
+		--deploy-mode cluster \
+		${jar.name} \
+			${local.input} \
+			${local.output}
 	make download-output-hdfs
 
 # Runs pseudo-clustered (quickie).
 pseudoq: jar clean-local-output clean-hdfs-output
-	spark-submit --class ${job.name} --master yarn --deploy-mode cluster ${jar.name} ${local.k} ${local.iterations}
+	spark-submit \
+		--class ${job.name} \
+		--master yarn \
+		--deploy-mode cluster \
+		${jar.name} \
+			${local.input} \
+			${local.iterations}
 	make download-output-hdfs
 
 # Create S3 bucket.
 make-bucket:
-	aws s3 mb s3://${aws.bucket.name}
+	aws s3 \
+		mb s3://${aws.bucket.name}
 
 # Upload data to S3 input dir.
 upload-input-aws: make-bucket
-	aws s3 sync ${local.input} s3://${aws.bucket.name}/${aws.input}
+	aws s3 \
+		sync ${local.input} s3://${aws.bucket.name}/${aws.input}
 
 # Delete S3 output dir.
 delete-output-aws:
-	aws s3 rm s3://${aws.bucket.name}/ --recursive --exclude "*" --include "${aws.output}*"
+	aws s3 \
+		rm s3://${aws.bucket.name}/ \
+			--recursive \
+			--exclude "*" \
+			--include "${aws.output}*"
 
 # Upload application to S3 bucket.
 upload-app-aws:
-	aws s3 cp ${jar.name} s3://${aws.bucket.name}
+	aws s3 \
+		cp ${jar.name} s3://${aws.bucket.name}
 
 # Main EMR launch.
 aws: jar upload-app-aws delete-output-aws
-	aws emr create-cluster \
-		--name "${project.name} Cluster" \
-		--release-label ${aws.emr.release} \
-		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
-	    --applications Name=Hadoop Name=Spark \
-		--steps Type=CUSTOM_JAR,Name="${app.name}",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","${job.name}","s3://${aws.bucket.name}/${jar.name}","s3://${aws.bucket.name}/${aws.input}","s3://${aws.bucket.name}/${aws.output}"] \
-		--log-uri s3://${aws.bucket.name}/${aws.log.dir} \
-		--use-default-roles \
-		--enable-debugging \
-		--auto-terminate
+	aws emr \
+		create-cluster \
+			--name "${project.name} Cluster" \
+			--release-label ${aws.emr.release} \
+			--instance-groups '[' \
+				'{' \
+					'"InstanceCount":${aws.num.nodes},' \
+					'"InstanceGroupType":"CORE",' \
+					'"InstanceType":"${aws.instance.type}"' \
+				'},' \
+				'{' \
+					'"InstanceCount":1,' \
+					'"InstanceGroupType":"MASTER",' \
+					'"InstanceType":"${aws.instance.type}"' \
+				'}' \
+			']' \
+			--applications \
+				Name=Hadoop \
+				Name=Spark \
+			--steps \
+				Type=CUSTOM_JAR, \
+				Name="${app.name}", \
+				Jar="command-runner.jar", \
+				ActionOnFailure=TERMINATE_CLUSTER, \
+				Args=[ \
+					"spark-submit", \
+						"--deploy-mode", "cluster", \
+						"--class","${job.name}", \
+						"s3://${aws.bucket.name}/${jar.name}", \
+							"s3://${aws.bucket.name}/${aws.input}", \
+							"s3://${aws.bucket.name}/${aws.output}" \
+				] \
+			--log-uri s3://${aws.bucket.name}/${aws.log.dir} \
+			--use-default-roles \
+			--enable-debugging \
+			--auto-terminate
 
 # Download output from S3.
 download-output-aws: clean-local-output clean-local-log
 	mkdir ${local.output}
-	aws s3 sync s3://${aws.bucket.name}/${aws.output} ${local.output}
+	aws s3 \
+		sync s3://${aws.bucket.name}/${aws.output} ${local.output}
 	mkdir ${local.log}
-	aws s3 sync s3://${aws.bucket.name}/${aws.log.dir} ${local.log}
+	aws s3 \
+		sync s3://${aws.bucket.name}/${aws.log.dir} ${local.log}
 
 # Change to standalone mode.
 switch-standalone:
@@ -213,4 +274,3 @@ run-container-spark-jar-local: build-container-spark-jar-local
 rm-xml-jar-docker:
 	rm -rf docker/*.xml
 	rm -rf docker/*.jar
-
