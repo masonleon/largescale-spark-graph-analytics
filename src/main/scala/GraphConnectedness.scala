@@ -1,4 +1,5 @@
 import org.apache.log4j.LogManager
+import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
 object GraphConnectedness {
@@ -26,9 +27,16 @@ object GraphConnectedness {
       }
     )
 
-    // implement BFS/DFS to traverse all connected users
+    var active:RDD[(String, Int)] = sc.parallelize(Seq(("0",1)))
 
+    // implement BFS to traverse all connected users
+    for(iteration <- 1 to 4){
+      active = graph.join(active)
+        .flatMap({ case (id, (adjList, dummy)) => adjList.map(x => (x,1))
+        })
+        .reduceByKey((x,y) => x)
+    }
 
-    nodes.saveAsTextFile("GraphConnectednessOutput")
+    active.saveAsTextFile("GraphConnectednessOutput")
   }
 }
