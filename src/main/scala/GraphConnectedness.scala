@@ -12,10 +12,9 @@ object GraphConnectedness {
 
     val conf = new SparkConf().setAppName("GraphConnectedness").setMaster("local[*]")
     val sc = new SparkContext(conf)
-    val data = sc.textFile(args(0))
+    val data = sc.textFile(args(0)).map(x => x.split(" "))
 
-    val graph = data.map(line => line.split("\t"))
-      .map(d => (d(0), d(1)))
+    val graph = data.map(d => (d(0), d(1)))
       .groupByKey()
       .persist()
 
