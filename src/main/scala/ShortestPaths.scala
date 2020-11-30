@@ -27,10 +27,6 @@ object ShortestPaths {
     // Graph structure is static --> persist or cache
     val graph = generateGraphRDD(sc, args(0), " ")
 
-
-
-//    distances.saveAsTextFile(args(1))
-
     val diameter = getDiameter(sc, graph)
 
     diameter
