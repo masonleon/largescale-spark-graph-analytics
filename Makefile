@@ -28,14 +28,10 @@ aws.log.dir=log
 aws.num.nodes=5
 aws.instance.type=m5.xlarge
 
-# Docker Execution
-container.name=spark-assp
-container.base=cs6240
-container.base.img=spark
-#docker.notebooks=notebooks
-#docker.container.name=
-#docker.container.base=
-#docker.container.base.img=
+# Docker Local Execution
+docker.container.name=spark-assp
+docker.container.base=cs6240
+docker.container.base.img=spark
 
 # -----------------------------------------------------------
 
@@ -218,6 +214,7 @@ distro:
 	tar -czf ${project.name}.tar.gz -C build/deliv ${project.name}
 	cd build/deliv && zip -rq ../../${project.name}.zip ${project.name}
 
+# Starts docker container for jupyter notebook server with scala/spark kernel.
 run-container-spark-jupyter-almond:
 	docker run \
 		-it \
@@ -228,9 +225,11 @@ run-container-spark-jupyter-almond:
 		--name=spark-jupyter-almond \
 		almondsh/almond:0.6.0-scala-2.11.12
 
+# Reformat docker container for local spark deployment entry script.
 entry-container-spark-jar-local:
 	echo "#!/bin/bash \n\nspark-submit --class ${job.name} --master ${local.master} --name \"${app.name}\" ${jar.name} ${local.input} ${local.output}\ncp -a /output/* /result/\n" > docker/local.sh
 
+# Build base docker image for local spark deployment from cs6240/hadoop and cs6240/spark images.
 build-container-base:
 	if [[ "$(docker images -q cs6240/hadoop:latest 2> /dev/null)" != "" ]]; then \
 		docker rmi cs6240/hadoop:latest; \
@@ -247,17 +246,19 @@ build-container-base:
     	--target spark \
     	./docker/hadoop-spark/
 
-build-container-spark-jar-local: rm-xml-jar-docker jar build-container-base entry-container-spark-jar-local clean-local-output clean-local-log
-	if [[ "$(docker images -q ${container.base}/${container.base.img}:latest 2> /dev/null)" != "" ]]; then \
-			docker rmi ${container.base}/${container.base.img}:latest; \
+# Build docker container with compiled jar app for local spark deployment from cs6240/hadoop and cs6240/spark images.
+build-container-spark-jar-local: jar build-container-base entry-container-spark-jar-local clean-local-output clean-local-log
+	if [[ "$(docker images -q ${docker.container.base}/${docker.container.base.img}:latest 2> /dev/null)" != "" ]]; then \
+			docker rmi ${docker.container.base}/${docker.container.base.img}:latest; \
 	fi; \
 	cp config/standalone/*.xml docker/
 	cp ${jar.name} docker/
 	docker build \
-		--tag ${container.base}/${container.name} \
-		--target ${container.name} \
+		--tag ${docker.container.base}/${docker.container.name} \
+		--target ${docker.container.name} \
 		./docker/
 
+# Run docker container with compiled jar app for local spark deployment.
 run-container-spark-jar-local: build-container-spark-jar-local
 	docker run \
             -it \
@@ -268,9 +269,11 @@ run-container-spark-jar-local: build-container-spark-jar-local
             -p 9864:9864 \
             -v ${PWD}/input:/input/ \
             -v ${PWD}/output:/result/ \
-            --name=${container.name} \
-            ${container.base}/${container.name}:latest
+            --name=${docker.container.name} \
+            ${docker.container.base}/${docker.container.name}:latest; \
+    make rm-xml-jar-docker
 
+# Delete temp files.
 rm-xml-jar-docker:
 	rm -rf docker/*.xml
 	rm -rf docker/*.jar
