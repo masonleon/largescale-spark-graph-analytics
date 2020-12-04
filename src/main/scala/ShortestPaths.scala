@@ -56,7 +56,13 @@ object ShortestPaths {
   }
 
   /**
-   * All-Pairs-Shortest-Path
+   * All-Pairs-Shortest-Path. Finds the minimum distance from any node to all other nodes in the
+   * graph. For a graph of a social network, where each node represents a user and each edge
+   * represents friendship/followership, the all-pairs shortest path (APSP) data would represent the
+   * minimum “degree of separation” between each user. APSP can be used to determine “betweenness
+   * centrality”, which is a measure for quantifying the control of a human on the communication
+   * between other humans in a social network, or to determine graph “diameter”, which is a measure
+   * of network size.
    *
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
    * @return DistancesRDD representing all-pairs-shortest-paths for graph G in RDD format as RDD[(V_to, List[(V_from, Dist)])])
@@ -146,12 +152,14 @@ object ShortestPaths {
   }
 
   /**
-   * Get number of iterations. K = |V|.
+   * Get graph diameter. The diameter is defined as the longest path in the set of all-pairs
+   * shortest paths in the graph and is a common measure of network size. In a social network graph,
+   * a small diameter would indicate a high degree of connectivity between members (no one person
+   * has too many degrees of separation from another).
    *
    * @param context representing SparkContext
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   *
-   * @return k number of iterations for graph convergence.
+   * @return diameter of graph.
    */
   def getDiameter(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]) = {
     val DistancesRDD = asspRDD(GraphRDD)
