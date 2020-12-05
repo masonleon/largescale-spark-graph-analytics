@@ -16,6 +16,17 @@ These components are installed:
 - Maven 3.6.3
 - AWS CLI (for EMR execution)
 
+Dataset
+-------
+
+https://snap.stanford.edu/data/soc-LiveJournal1.html
+
+To download to input dir:
+	
+	```
+	bash ./data-download.sh
+	```
+
 Environment
 -----------
 1) Example ~/.bash_aliases:  
