@@ -16,7 +16,8 @@ object GraphRDD {
    * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
    */
   def generateGraphRDD(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
-    val graph = context
+//    val graph = context
+    context
       .textFile(inputFile)
       .map { line =>
         val tokens = line.split(separator)
@@ -25,7 +26,59 @@ object GraphRDD {
       .groupByKey()
       .cache()
 
-    graph
+//    graph
+  }
+
+  def getGexfRDD(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]): RDD[String] = {
+    val xml =
+      "<?xml " +
+        "version=\"1.0\" " +
+        "encoding=\"UTF-8\"" +
+        "?>\n" +
+        "<gexf " +
+        "xmlns=\"http://www.gexf.net/1.2draft\" " +
+        "version=\"1.2\"" +
+        ">\n" +
+        "  " +
+        "<graph " +
+        "mode=\"static\" " +
+        "defaultedgetype=\"directed\"" +
+        ">\n" +
+        "    " +
+        "<nodes>\n" +
+        GraphRDD
+          .map(v =>
+            "     " +
+              "<node " +
+              "id=\"" + v._1 + "\" " +
+              "label=\"" + v._1 + "\" " +
+              "/>\n"
+          ).collect.mkString +
+        "    " +
+        "</nodes>\n" +
+        "    " +
+        "<edges>\n" +
+        GraphRDD
+          .flatMap{ case (v, adjList) =>
+            adjList
+              .map(
+                adjId =>
+                  "      " +
+                    "<edge " +
+                    "source=\"" + v + "\" " +
+                    "target=\"" + adjId + "\" " +
+                    "weight=\"" + edgeWeight + "\" " +
+                    "/>\n"
+              )
+          }.collect.mkString +
+        "    " +
+        "</edges>\n" +
+        "  " +
+        "</graph>\n" +
+        "</gexf>"
+
+    context
+      .parallelize(List(xml))
   }
 
 }

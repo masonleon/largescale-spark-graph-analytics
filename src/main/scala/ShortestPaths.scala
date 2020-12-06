@@ -1,4 +1,4 @@
-import ood.GraphRDD.generateGraphRDD
+import ood.GraphRDD.{generateGraphRDD, getGexfRDD}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -53,57 +53,7 @@ object ShortestPaths {
    * @param
    * @return
    */
-  def getGexfRDD(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]): RDD[String] = {
-    val xml =
-      "<?xml " +
-        "version=\"1.0\" " +
-        "encoding=\"UTF-8\"" +
-      "?>\n" +
-      "<gexf " +
-        "xmlns=\"http://www.gexf.net/1.2draft\" " +
-        "version=\"1.2\"" +
-      ">\n" +
-      "  " +
-        "<graph " +
-          "mode=\"static\" " +
-          "defaultedgetype=\"directed\"" +
-        ">\n" +
-      "    " +
-          "<nodes>\n" +
-            GraphRDD
-              .map(v =>
-      "     " +
-            "<node " +
-              "id=\"" + v._1 + "\" " +
-              "label=\"" + v._1 + "\" " +
-            "/>\n"
-              ).collect.mkString +
-      "    " +
-          "</nodes>\n" +
-      "    " +
-          "<edges>\n" +
-            GraphRDD
-              .flatMap{ case (v, adjList) =>
-                adjList
-                  .map(
-                    adjId =>
-      "      " +
-            "<edge " +
-              "source=\"" + v + "\" " +
-              "target=\"" + adjId + "\" " +
-              "weight=\"" + edgeWeight + "\" " +
-            "/>\n"
-                  )
-              }.collect.mkString +
-      "    " +
-          "</edges>\n" +
-      "  " +
-        "</graph>\n" +
-      "</gexf>"
 
-    context
-      .parallelize(List(xml))
-  }
 
   /**
    * Helper function to save output in coalesced single text file.
