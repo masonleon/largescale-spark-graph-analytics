@@ -28,17 +28,19 @@ object Cycles {
         (nodes(0), nodes(1))        // (fromId, toId)
       } //TODO persist/cache? b/c it is static?
 
-    var paths = hops.map(x => x)
+    var paths = hops.map(x => (x._2,x._1))
     var pathSize = 1
     var maxCycleSize = 0L
     while (!paths.isEmpty()) {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
-      paths = paths.join(hops)
+      paths = hops.join(paths)
         .map { case (_, (toId, fromId)) => (fromId, toId) }
         .distinct()
+
       paths.foreach(x => println(x))
+//      System.exit(0)
 
       // Count rows that are cycles
       val cycles = paths.filter { case (toId, fromId) => fromId.equals(toId) }
