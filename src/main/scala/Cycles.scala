@@ -1,16 +1,18 @@
+import org.apache.avro.generic.GenericData.StringType
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.StructType
 
 
 object Cycles {
   /**
-    * Reads input from .csv file.  Each line of input expected to be in the format "[fromID],
-    * [toID]".  Identifies the largest cycle between users.
-    *
-    * @param args first argument: input file path, second argument: output file path
-    */
+   * Reads input from .csv file.  Each line of input expected to be in the format "[fromID],
+   * [toID]".  Identifies the largest cycle between users.
+   *
+   * @param args first argument: input file path, second argument: output file path
+   */
   def main(args: Array[String]): Unit = {
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
     if (args.length != 2) {
@@ -20,10 +22,22 @@ object Cycles {
 
     val sparkSession = SparkSession.builder
       .appName("Cycles")
+      .master("local")
       .getOrCreate()
 
     import sparkSession.implicits._
 
+    val input = sparkSession.sparkContext.textFile(args(0))
+
+    val hops = input
+      .map { line =>
+        val nodes = line.split(" ")
+        (nodes(0), nodes(1)) // (fromId, toId)
+      }
+
+    val df = hops.toDF("from", "to")
+    val dfColumns = df.groupBy("from", "to")
+    df.show()
 
 
 //    val conf = new SparkConf().setAppName("Cycles").setMaster("local")
@@ -64,5 +78,5 @@ object Cycles {
 //    sc.parallelize(Seq(maxCycleSize))
 //      .coalesce(1)
 //      .saveAsTextFile(args(1))
-//  }
+  }
 }
