@@ -27,7 +27,8 @@ object Cycles {
       .map { line =>
         val nodes = line.split(" ")
         (nodes(0), nodes(1))        // (fromId, toId)
-      } //TODO persist/cache? b/c it is static?
+      }
+      .cache()
 
     var paths = hops.map { case (fromId, toId) => (toId, fromId) }
     var pathSize = 1
