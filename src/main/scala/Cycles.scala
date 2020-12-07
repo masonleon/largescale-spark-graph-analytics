@@ -15,23 +15,9 @@ object Cycles {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("Cycles")
+    val conf = new SparkConf().setAppName("Cycles").setMaster("local")
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
-
-    // Line of input: (fromId, toId)
-    // data = sc.textFile(input).map(line => (toId, fromId))
-    // path = data.map((toId, fromId) => (fromId, toId))
-    // pathSize = 1
-    // maxCycleSize = 0
-    //  while path is not empty:			// iterate until path no longer grows
-    //    pathSize += 1				// Path length grows with each iteration
-    //    path = path.join(data)		// Find next “hops” in path
-    //    cycle = path.filter(matching keys)		// Keep only closed cycles
-    //    // filter out keys from path that are in cycle to keep from going in circles
-    //    path = path.leftJoin(cycle).filter(Keep rows that were NOT in cycles)
-    //    if cycle:
-    //      maxCycleSize = pathSize
 
     val hops = input
       .map { line =>
