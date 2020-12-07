@@ -1,5 +1,8 @@
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.SparkSession
+
 
 object Cycles {
   /**
@@ -15,43 +18,51 @@ object Cycles {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("Cycles").setMaster("local")
-    val sc = new SparkContext(conf)
-    val input = sc.textFile(args(0))
+    val sparkSession = SparkSession.builder
+      .appName("Cycles")
+      .getOrCreate()
 
-    val hops = input
-      .map { line =>
-        val nodes = line.split(" ")
-        (nodes(0), nodes(1))        // (fromId, toId)
-      } //TODO persist/cache? b/c it is static?
+    import sparkSession.implicits._
 
-    var paths = hops.map(x => x)
-    var pathSize = 1
-    var maxCycleSize = 0L
 
-    while (!paths.isEmpty()) {
-      pathSize += 1
 
-      // get all paths of size "pathSize" starting at "from" ending at "to"
-      paths = paths.join(hops)
-        .map { case (_, (fromId, toId)) => (fromId, toId) }
-        .distinct()
-      paths.foreach(x => println(x))
-      // Count rows that are cycles
-      val cycles = paths.filter { case (toId, fromId) => fromId.equals(toId) }
-        .count()
+//    val conf = new SparkConf().setAppName("Cycles").setMaster("local")
+//    val sc = new SparkContext(conf)
+//    val input = sc.textFile(args(0))
+//
+//    val hops = input
+//      .map { line =>
+//        val nodes = line.split(" ")
+//        (nodes(0), nodes(1))        // (fromId, toId)
+//      } //TODO persist/cache? b/c it is static?
+//
+//    var paths = hops.map(x => x)
+//    var pathSize = 1
+//    var maxCycleSize = 0L
+//
+//    while (!paths.isEmpty()) {
+//      pathSize += 1
+//
+//      // get all paths of size "pathSize" starting at "from" ending at "to"
+//      paths = paths.join(hops)
+//        .map { case (_, (toId, fromId)) => (fromId, toId) }
+////        .distinct()
+//      paths.foreach(x => println(x))
+//      // Count rows that are cycles
+//      val cycles = paths.filter { case (toId, fromId) => fromId.equals(toId) }
+//        .count()
+//
+//      if (cycles > 0) {
+//        maxCycleSize = pathSize
+//      }
+//
+//      // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
+//      paths = paths.filter { case (toId, fromId) => !fromId.equals(toId) }
+//    }
 
-      if (cycles > 0) {
-        maxCycleSize = pathSize
-      }
-
-      // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
-      paths = paths.filter { case (toId, fromId) => !fromId.equals(toId) }
-    }
-
-    logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
-    sc.parallelize(Seq(maxCycleSize))
-      .coalesce(1)
-      .saveAsTextFile(args(1))
-  }
+//    logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
+//    sc.parallelize(Seq(maxCycleSize))
+//      .coalesce(1)
+//      .saveAsTextFile(args(1))
+//  }
 }
