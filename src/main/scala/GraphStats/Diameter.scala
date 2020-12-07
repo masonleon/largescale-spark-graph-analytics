@@ -1,8 +1,10 @@
+package GraphStats
+
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
-object GraphStats {
+object Diameter {
   def main(args: Array[String]): Unit = {
 
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
@@ -22,14 +24,14 @@ object GraphStats {
     //TODO use same partitioner to avoid reshuffling
 
     // starting node
-    var active:RDD[(String, Int)] = sc.parallelize(Seq(("0",1)))
+    var active: RDD[(String, Int)] = sc.parallelize(Seq(("0", 1)))
 
     // implement BFS to traverse all connected users
-    for(iteration <- 1 to 4){
+    for (iteration <- 1 to 4) {
       active = graph.join(active)
         .flatMap({ case (id, (adjList, dummy)) => adjList.map(x => (x, 1))
         })
-        .reduceByKey((x,y) => x)
+        .reduceByKey((x, y) => x)
     }
 
     /**
