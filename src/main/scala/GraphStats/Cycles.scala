@@ -22,25 +22,24 @@ object Cycles {
     val conf = new SparkConf().setAppName("Cycles").setMaster("local")
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
+
     val hops = input
       .map { line =>
         val nodes = line.split(" ")
         (nodes(0), nodes(1))        // (fromId, toId)
       } //TODO persist/cache? b/c it is static?
 
-    var paths = hops.map(x => (x._2,x._1))
+    var paths = hops.map { case (fromId, toId) => (toId, fromId) }
     var pathSize = 1
     var maxCycleSize = 0L
+
     while (!paths.isEmpty()) {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
-      paths = hops.join(paths)
-        .map { case (_, (toId, fromId)) => (fromId, toId) }
+      paths = paths.join(hops)
+        .map { case (_, (fromId, toId)) => (toId, fromId) }
         .distinct()
-
-      paths.foreach(x => println(x))
-//      System.exit(0)
 
       // Count rows that are cycles
       val cycles = paths.filter { case (toId, fromId) => fromId.equals(toId) }
@@ -51,7 +50,10 @@ object Cycles {
       }
 
       // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
-      paths = paths.filter { case (toId, fromId) => !fromId.equals(toId) }
+      paths = paths.filter {
+        case (toId, fromId) => !fromId.equals(toId)
+      }
+      paths.foreach(x => println(x))
     }
 
     logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
