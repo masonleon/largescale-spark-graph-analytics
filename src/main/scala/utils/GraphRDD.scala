@@ -38,14 +38,25 @@ object GraphRDD {
       .toInt
   }
 
+//  /**
+//   * Helper function to save output in coalesced single text file.
+//   *
+//   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+//   * @param outputFile representing string output file dir.
+//   */
+//  def saveSingleOutput(GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
+//    GraphRDD
+//      .coalesce(1)
+//      .saveAsTextFile(outputFile)
+//  }
   /**
    * Helper function to save output in coalesced single text file.
    *
-   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   * @param data any RDD containing key (String, String) and value (Int)
    * @param outputFile representing string output file dir.
    */
-  def saveSingleOutput(GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
-    GraphRDD
+  def saveSingleOutput(data: RDD[((String, String), Int)], outputFile: String) = {
+    data
       .coalesce(1)
       .saveAsTextFile(outputFile)
   }

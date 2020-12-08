@@ -1,59 +1,56 @@
 package GraphStats
 
+import ShortestPath.ShortestPaths.{apspRDD, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+import utils.GraphRDD.generateGraphRDD
 
 object Diameter {
   def main(args: Array[String]): Unit = {
 
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
     if (args.length != 1) {
-      logger.error("Usage:\nGraphConnectedness <input>")
+      logger.error("Usage:\nGraphDiameter <input>")
       System.exit(1)
     }
 
     val conf = new SparkConf()
-      .setAppName("GraphConnectedness")
-      .setMaster("local[*]")
+      .setAppName("Diameter")
+//      .setMaster("local[*]")
 
     val sc = new SparkContext(conf)
 
-    val data = sc
-      .textFile(args(0))
-      .map(x => x.split(" "))
+    // Input file: (userID, friendID)
+    // Transform to...
+    // Graph structure:  (userID, List[(friends)])
+    // Graph structure is static --> persist or cache
+    val graph = generateGraphRDD(sc, args(0), " ")
+      .cache()
 
-    val graph = data
-      .map(d => (d(0), d(1)))
-      .groupByKey()
-      .persist()
+    val diameter = getDiameter(sc, graph)
 
-    //TODO use same partitioner to avoid reshuffling
+    saveSingleOutput(diameter, args(1) + "/diameter")
+  }
 
-    // starting node
-    var active: RDD[(String, Int)] = sc.parallelize(Seq(("0", 1)))
+  /**
+   * Get graph diameter. The diameter is defined as the longest path in the set of all-pairs
+   * shortest paths in the graph and is a common measure of network size. In a social network graph,
+   * a small diameter would indicate a high degree of connectivity between members (no one person
+   * has too many degrees of separation from another).
+   *
+   * @param context  representing SparkContext
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   * @return diameter of graph.
+   */
+  def getDiameter(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]) = {
+    val DistancesRDD = apspRDD(GraphRDD)
 
-    // implement BFS to traverse all connected users
-    for(iteration <- 1 to 4){
-      active = graph
-        .join(active)
-        .flatMap({ case (id, (adjList, dummy)) => adjList.map(x => (x, 1))
-        })
-        .reduceByKey((x, y) => x)
-    }
+    val diameter = DistancesRDD
+      .sortBy(_._2, ascending = false)
+      .take(1)
 
-    /**
-     * Pseudo-Code for Diameter + Largest Cycle
-     * Diameter -- takes all-pairs solution from ShortestPaths.scala and finds the path with max distance --
-     *
-     * Largest Cycle
-     * iterative solution similar to triangles to start
-     * var path = data.join(reverse_data)
-     * var cycle = path.filter(matching keys) // iter1
-     * continue iterations until path no longer grows
-     */
-
-    active
-      .saveAsTextFile("GraphConnectednessOutput")
+    context
+      .parallelize(diameter)
   }
 }

@@ -1,6 +1,6 @@
 package ShortestPath
 
-import utils.GraphRDD.{generateGraphRDD, getNumEdges}
+import utils.GraphRDD.{generateGraphRDD, getNumEdges, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext, rdd}
@@ -31,15 +31,11 @@ object ShortestPaths {
     val graph = generateGraphRDD(sc, args(0), " ")
       .cache()
 
-    val diameter = getDiameter(sc, graph)
-    saveSingleOutput(diameter, args(1) + "/diameter")
-
     val distances = apspRDD(graph)
     saveSingleOutput(distances, args(1) + "/distances")
 
     //    val gexf = getGexfRDD(sc, graph)
     //    saveGexfSingleOutput(gexf, args(1) + "/gexf")
-
   }
 
   /**
@@ -113,36 +109,4 @@ object ShortestPaths {
     }
   }.filter { case ((toId, fromId), _) => !toId.equals(fromId) } // Don't keep circular distances
 
-  /**
-   * Get graph diameter. The diameter is defined as the longest path in the set of all-pairs
-   * shortest paths in the graph and is a common measure of network size. In a social network graph,
-   * a small diameter would indicate a high degree of connectivity between members (no one person
-   * has too many degrees of separation from another).
-   *
-   * @param context  representing SparkContext
-   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   * @return diameter of graph.
-   */
-  def getDiameter(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]) = {
-    val DistancesRDD = apspRDD(GraphRDD)
-
-    val diameter = DistancesRDD
-      .sortBy(_._2, ascending = false)
-      .take(1)
-
-    context
-      .parallelize(diameter)
-  }
-
-  /**
-   * Helper function to save output in coalesced single text file.
-   *
-   * @param data any RDD containing key (String, String) and value (Int)
-   * @param outputFile representing string output file dir.
-   */
-  def saveSingleOutput(data: RDD[((String, String), Int)], outputFile: String) = {
-    data
-      .coalesce(1)
-      .saveAsTextFile(outputFile)
-  }
 }

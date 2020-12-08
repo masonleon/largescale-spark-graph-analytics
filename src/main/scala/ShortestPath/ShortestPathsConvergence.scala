@@ -1,7 +1,7 @@
 package ShortestPath
 
-import utils.GraphRDD.generateGraphRDD
-import ShortestPath.ShortestPaths.{initializeDistances, saveSingleOutput, updateDistances}
+import utils.GraphRDD.{generateGraphRDD, saveSingleOutput}
+import ShortestPath.ShortestPaths.{initializeDistances, updateDistances}
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
