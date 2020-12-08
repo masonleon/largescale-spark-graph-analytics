@@ -19,18 +19,20 @@ object Cycles {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("Cycles").setMaster("local")
+    val conf = new SparkConf().setAppName("Cycles")
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
+    // "Hops" are the ways to get from a node to another node
     val hops = input
       .map { line =>
-        val nodes = line.split(" ")
+        val nodes = line.split("\t")
         (nodes(0), nodes(1))        // (fromId, toId)
       }
-      .cache()
+      .persist()
 
-    var paths = hops.map { case (fromId, toId) => (toId, fromId) }
+    // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
+    var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
     var pathSize = 1
     var maxCycleSize = 0L
 
@@ -39,11 +41,14 @@ object Cycles {
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
       paths = paths.join(hops)
-        .map { case (_, (fromId, toId)) => (toId, fromId) }
+        .filter { case (middleId, ((_, intermediates), _)) => !intermediates.contains(middleId) } // Don't join on a key where you've already been!
+        .map { case (middleId, ((fromId, intermediates), toId)) =>
+          (toId, (fromId, intermediates ++ List(middleId)))   // Add join key to list of intermediates
+        }
         .distinct()
 
       // Count rows that are cycles
-      val cycles = paths.filter { case (toId, fromId) => fromId.equals(toId) }
+      val cycles = paths.filter { case (toId, (fromId, _)) => fromId.equals(toId) }
         .count()
 
       if (cycles > 0) {
@@ -51,11 +56,9 @@ object Cycles {
       }
 
       // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
-      paths = paths.filter {
-        case (toId, fromId) => !fromId.equals(toId)
-      }
-      paths.foreach(x => println(x))
+      paths = paths.filter { case (toId, (fromId, _)) => !fromId.equals(toId) }
     }
+
 
     logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
     sc.parallelize(Seq(maxCycleSize))
