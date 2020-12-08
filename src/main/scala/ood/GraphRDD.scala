@@ -29,6 +29,40 @@ object GraphRDD {
 //    graph
   }
 
+  /**
+   * Get number of edges. K = |V|.
+   *
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   * @return k number of iterations for graph convergence.
+   */
+  def getNumEdges(GraphRDD: RDD[(String, Iterable[String])]): Int = {
+//    val k = GraphRDD
+    GraphRDD
+      .count()
+      .toInt
+
+//    k
+  }
+
+  /**
+   * Helper function to save output in coalesced single text file.
+   *
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
+   * @param outputFile representing string output file dir.
+   */
+  def saveSingleOutput(GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
+    GraphRDD
+      .coalesce(1)
+      .saveAsTextFile(outputFile)
+  }
+
+  /**
+   * adapted from 4.3.3. GEXF format for Gephi visualization software
+   * https://livebook.manning.com/book/spark-graphx-in-action/chapter-4/ch04lev2sec6
+   * https://livebook.manning.com/book/spark-graphx-in-action/chapter-4/point-9169-150-150-0
+   * @param
+   * @return
+   */
   def getGexfRDD(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]): RDD[String] = {
     val xml =
       "<?xml " +
@@ -67,7 +101,7 @@ object GraphRDD {
                     "<edge " +
                     "source=\"" + v + "\" " +
                     "target=\"" + adjId + "\" " +
-                    "weight=\"" + edgeWeight + "\" " +
+//                    "weight=\"" + edgeWeight + "\" " +
                     "/>\n"
               )
           }.collect.mkString +
@@ -81,4 +115,10 @@ object GraphRDD {
       .parallelize(List(xml))
   }
 
+
+  def saveGexfSingleOutput(GexfRDD: RDD[String], outputFile: String) = {
+    GexfRDD
+      .coalesce(1)
+      .saveAsTextFile(outputFile)
+  }
 }

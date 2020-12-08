@@ -1,4 +1,4 @@
-import ood.GraphRDD.{generateGraphRDD, getGexfRDD}
+import ood.GraphRDD.{generateGraphRDD, getGexfRDD, getNumEdges, saveGexfSingleOutput, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -40,33 +40,6 @@ object ShortestPaths {
 
   }
 
-  def saveGexfSingleOutput(GexfRDD: RDD[String], outputFile: String) = {
-    GexfRDD
-      .coalesce(1)
-      .saveAsTextFile(outputFile)
-  }
-
-  /**
-   * adapted from 4.3.3. GEXF format for Gephi visualization software
-   * https://livebook.manning.com/book/spark-graphx-in-action/chapter-4/ch04lev2sec6
-   * https://livebook.manning.com/book/spark-graphx-in-action/chapter-4/point-9169-150-150-0
-   * @param
-   * @return
-   */
-
-
-  /**
-   * Helper function to save output in coalesced single text file.
-   *
-   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   * @param outputFile representing string output file dir.
-   */
-  def saveSingleOutput(GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
-    GraphRDD
-      .coalesce(1)
-      .saveAsTextFile(outputFile)
-  }
-
   /**
    * All-Pairs-Shortest-Path. Finds the minimum distance from any node to all other nodes in the
    * graph. For a graph of a social network, where each node represents a user and each edge
@@ -80,7 +53,7 @@ object ShortestPaths {
    * @return DistancesRDD representing all-pairs-shortest-paths for graph G in RDD format as RDD[(V_to, List[(V_from, Dist)])])
    */
   def asspRDD(GraphRDD: RDD[(String, Iterable[String])]) = {
-    val k = getK(GraphRDD)
+    val k = getNumEdges(GraphRDD)
 
     // Distances structure: (toId, (fromId, distance))
     // This data will change each iteration
@@ -125,22 +98,6 @@ object ShortestPaths {
     }
   }.filter { case ((toId, fromId), _) => !toId.equals(fromId) } // Don't keep circular distances
   //TODO incorporate filter logic in the match statement to make more efficient?
-
-
-
-  /**
-   * Get number of iterations. K = |V|.
-   *
-   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   * @return k number of iterations for graph convergence.
-   */
-  def getK(GraphRDD: RDD[(String, Iterable[String])]): Int = {
-    val k = GraphRDD
-      .count()
-      .toInt
-
-    k
-  }
 
   /**
    * Get graph diameter. The diameter is defined as the longest path in the set of all-pairs
