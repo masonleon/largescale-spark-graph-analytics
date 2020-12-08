@@ -16,5 +16,4 @@ echo "-----Download complete-----"
 echo "-----Deleting file header rows----"
 sed '1,4d' "$SAVEPATH"/"$FILE_NAME" > "$SAVEPATH"/tmpfile
 mv "$SAVEPATH"/tmpfile "$SAVEPATH"/"$FILE_NAME"
-rm "$SAVEPATH"/tmpfile
 echo "-----Done----"
