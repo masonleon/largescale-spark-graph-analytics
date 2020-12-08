@@ -13,10 +13,9 @@ object GraphRDD {
    * @param context representing SparkContext
    * @param inputFile representing argument for input file
    * @param separator representing the separator character such as ",", " ", "|", etc.*
-   * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
+   * @return graph G in adjacency list format as RDD[(V, List[(V)])
    */
   def generateGraphRDD(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
-//    val graph = context
     context
       .textFile(inputFile)
       .map { line =>
@@ -24,9 +23,7 @@ object GraphRDD {
         (tokens(0), tokens(1))
       }
       .groupByKey()
-      .cache()
-
-//    graph
+//      .cache()
   }
 
   /**
@@ -36,12 +33,9 @@ object GraphRDD {
    * @return k number of iterations for graph convergence.
    */
   def getNumEdges(GraphRDD: RDD[(String, Iterable[String])]): Int = {
-//    val k = GraphRDD
     GraphRDD
       .count()
       .toInt
-
-//    k
   }
 
   /**
@@ -114,7 +108,6 @@ object GraphRDD {
     context
       .parallelize(List(xml))
   }
-
 
   def saveGexfSingleOutput(GexfRDD: RDD[String], outputFile: String) = {
     GexfRDD

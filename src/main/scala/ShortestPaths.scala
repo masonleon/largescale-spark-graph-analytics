@@ -1,7 +1,7 @@
 import graph.GraphRDD.{generateGraphRDD, getGexfRDD, getNumEdges, saveGexfSingleOutput, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext, rdd}
 
 object ShortestPaths {
 
@@ -22,21 +22,21 @@ object ShortestPaths {
 
     val sc = new SparkContext(conf)
 
-    // TODO use same partitioner for graph and distances to reduce shuffling during join
     // Input file: (userID, friendID)
     // Transform to...
     // Graph structure:  (userID, List[(friends)])
     // Graph structure is static --> persist or cache
     val graph = generateGraphRDD(sc, args(0), " ")
+      .cache()
 
     val diameter = getDiameter(sc, graph)
     saveSingleOutput(diameter, args(1) + "/diameter")
 
-    val distances = asspRDD(graph)
+    val distances = apspRDD(graph)
     saveSingleOutput(distances, args(1) + "/distances")
 
-    val gexf = getGexfRDD(sc, graph)
-    saveGexfSingleOutput(gexf, args(1) + "/gexf")
+//    val gexf = getGexfRDD(sc, graph)
+//    saveGexfSingleOutput(gexf, args(1) + "/gexf")
 
   }
 
@@ -50,54 +50,65 @@ object ShortestPaths {
    * of network size.
    *
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-   * @return DistancesRDD representing all-pairs-shortest-paths for graph G in RDD format as RDD[(V_to, List[(V_from, Dist)])])
+   * @return DistancesRDD representing all-pairs-shortest-paths for graph G in RDD format as RDD[((V_to, List, V_from), Dist)])])
    */
-  def asspRDD(GraphRDD: RDD[(String, Iterable[String])]) = {
+  def apspRDD(GraphRDD: RDD[(String, Iterable[String])]) = {
     val k = getNumEdges(GraphRDD)
 
-    // Distances structure: (toId, (fromId, distance))
+    // Distances structure: ((toId, fromId), distance)
     // This data will change each iteration
-    // Set all distances for "first hop" to 1
-    var DistancesRDD = GraphRDD
-      .flatMap { case (fromId, adjList) =>
-        adjList
-          .map(adjId => (adjId, (fromId, edgeWeight)))
-      }
+    var DistancesRDD = initializeDistances(GraphRDD, false)
 
-    // How to calculate the shortest path?
-    // All origin userIDs are nodes in the graph.  If there exists a shortest path to anywhere, it must start at an ID in the graph
-    // On a shortest path, for all nodes in the path, the path is also the shortest path for those nodes
-    // So we really just need to build up the paths from every possible starting ID?
-    // And then after convergence go through and output the final results?  How?
-    // Will every node get covered?
     for (iteration <- 0 to k) {
-      DistancesRDD = GraphRDD
-        .rightOuterJoin(DistancesRDD) // (toId, (Option[adjList], (fromId, distance)))
+      DistancesRDD = DistancesRDD.map { case ((toId, fromId), distance) =>
+        (toId, (fromId, distance))
+      }
+        .leftOuterJoin(GraphRDD) // (toId, ((fromId, distance), Option[adjList]))
         .flatMap(x => updateDistances(x))
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
-        .map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
     }
 
     DistancesRDD
   }
 
   /**
-   * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
-   * the current node.  Returns current distance info for current node with updated distance info
-   * for all of its adjacent nodes.
-   *
-   * @param tuple representing (toId, (adjList, (fromId, distance)))
-   * @return Iterable representing updated ((toId, fromId), distance)
-   */
-  def updateDistances(tuple: (String, (Option[Iterable[String]], (String, Int)))): Iterable[((String, String), Int)] = {
-    tuple match {
-      case (toId, (Some(adjList), (fromId, distance))) =>
-        adjList
-          .map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
-      case (toId, (None, (fromId, distance))) => List(((toId, fromId), distance))
+    * Initialize the path distances structure for a graph.
+    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)])
+    * @param optimize set as true to explicitly use same partitioner for graph and distance structures
+    * @return distances data as RDD[((toId, fromId), distance)]
+    */
+  def initializeDistances(GraphRDD: RDD[(String, Iterable[String])], optimize: Boolean) = {
+    // Set all distances for "first hop" to 1
+    val distances = GraphRDD.flatMap { case (fromId, adjList) =>
+      adjList.map(adjId => ((adjId, fromId), edgeWeight))
+    }
+
+    if (optimize) {
+      val graphPartitioner = GraphRDD.partitioner match {
+        case Some(p) => p
+        case None => new HashPartitioner(GraphRDD.partitions.length)
+      }
+      distances.partitionBy(graphPartitioner)
+    }
+
+    distances
+  }
+
+  /**
+    * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
+    * the current node.  Returns current distance info for current node with updated distance info
+    * for all of its adjacent nodes.
+    *
+    * @param tuple representing (toId, (adjList, (fromId, distance)))
+    * @return Iterable representing updated ((toId, fromId), distance)
+    */
+  def updateDistances(tuple: (String, ((String, Int), Option[Iterable[String]]))): Iterable[((String, String), Int)] = {
+      tuple match {
+      case (toId, ((fromId, distance), Some(adjList))) =>
+        adjList.map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
+      case (toId, ((fromId, distance), None)) => List(((toId, fromId), distance))
     }
   }.filter { case ((toId, fromId), _) => !toId.equals(fromId) } // Don't keep circular distances
-  //TODO incorporate filter logic in the match statement to make more efficient?
 
   /**
    * Get graph diameter. The diameter is defined as the longest path in the set of all-pairs
@@ -110,13 +121,25 @@ object ShortestPaths {
    * @return diameter of graph.
    */
   def getDiameter(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]) = {
-    val DistancesRDD = asspRDD(GraphRDD)
+    val DistancesRDD = apspRDD(GraphRDD)
 
     val diameter = DistancesRDD
-      .sortBy(_._2._2, ascending = false)
+      .sortBy(_._2, ascending = false)
       .take(1)
 
     context
       .parallelize(diameter)
+  }
+
+  /**
+   * Helper function to save output in coalesced single text file.
+   *
+   * @param data any RDD containing key (String, String) and value (Int)
+   * @param outputFile representing string output file dir.
+   */
+  def saveSingleOutput(data: RDD[((String, String), Int)], outputFile: String) = {
+    data
+      .coalesce(1)
+      .saveAsTextFile(outputFile)
   }
 }
