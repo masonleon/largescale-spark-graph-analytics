@@ -1,12 +1,14 @@
-import ShortestPaths.{generateGraphRDD, initializeDistances, saveSingleOutput, updateDistances}
+package ShortestPath
+
+import ShortestPath.ShortestPaths.{generateGraphRDD, initializeDistances, saveSingleOutput, updateDistances}
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
 object ShortestPathsConvergence {
 
   /**
-    * Weight for each edge connecting vertices in the graph.
-    */
+   * Weight for each edge connecting vertices in the graph.
+   */
   val edgeWeight = 1
   val optimizeJoin = true
 
@@ -31,15 +33,15 @@ object ShortestPathsConvergence {
     var numUpdated = 1L
     while (numUpdated > 0) {
       val temp = distances.map { case ((toId, fromId), distance) => (toId, (fromId, distance)) }
-        .leftOuterJoin(graph)   // (toId, ((fromId, distance), Option[adjList]))
+        .leftOuterJoin(graph) // (toId, ((fromId, distance), Option[adjList]))
         .flatMap(x => updateDistances(x))
         .reduceByKey((x, y) => Math.min(x, y)) // Only keep min distance for any (to, from) pair
 
-      numUpdated = temp.leftOuterJoin(distances)  // ((to, from), newDist, Option[oldDist])
+      numUpdated = temp.leftOuterJoin(distances) // ((to, from), newDist, Option[oldDist])
         .filter {
-        case (_, (newDist, Some(oldDist))) => newDist != oldDist
-        case (_, (_, None)) => true
-      }.count()
+          case (_, (newDist, Some(oldDist))) => newDist != oldDist
+          case (_, (_, None)) => true
+        }.count()
 
       distances = temp
       iterCount += 1

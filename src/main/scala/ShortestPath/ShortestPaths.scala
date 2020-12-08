@@ -1,9 +1,8 @@
+package ShortestPath
+
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext, rdd}
-//import org.apache.spark.sql.SparkSession
-//import org.json4s.native.JsonMethods._
-//import org.json4s.JsonDSL.WithDouble._
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 
 object ShortestPaths {
 
@@ -37,15 +36,15 @@ object ShortestPaths {
     saveSingleOutput(distances, args(1) + "/distances")
   }
 
-//  def saveJSONOutput(spark: SparkSession, GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
-//    val df = spark.createDataFrame(distances)
-//    df.coalesce(1).write.json(args(1) + "/test.json")
-//  }
+  //  def saveJSONOutput(spark: SparkSession, GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
+  //    val df = spark.createDataFrame(distances)
+  //    df.coalesce(1).write.json(args(1) + "/test.json")
+  //  }
 
   /**
    * Helper function to save output in coalesced single text file.
    *
-   * @param data any RDD containing key (String, String) and value (Int)
+   * @param data       any RDD containing key (String, String) and value (Int)
    * @param outputFile representing string output file dir.
    */
   def saveSingleOutput(data: RDD[((String, String), Int)], outputFile: String) = {
@@ -90,7 +89,7 @@ object ShortestPaths {
    * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
    * each edge is record in text file of v1 -> v2.
    *
-   * @param context representing SparkContext
+   * @param context   representing SparkContext
    * @param inputFile representing argument for input file
    * @param separator representing the separator character such as ",", " ", "|", etc.*
    * @return cached graph G in adjacency list format as RDD[(V, List[(V)])
@@ -109,11 +108,12 @@ object ShortestPaths {
   }
 
   /**
-    * Initialize the path distances structure for a graph.
-    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)])
-    * @param optimize set as true to explicitly use same partitioner for graph and distance structures
-    * @return distances data as RDD[((toId, fromId), distance)]
-    */
+   * Initialize the path distances structure for a graph.
+   *
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)])
+   * @param optimize set as true to explicitly use same partitioner for graph and distance structures
+   * @return distances data as RDD[((toId, fromId), distance)]
+   */
   def initializeDistances(GraphRDD: RDD[(String, Iterable[String])], optimize: Boolean) = {
     // Set all distances for "first hop" to 1
     val distances = GraphRDD.flatMap { case (fromId, adjList) =>
@@ -146,13 +146,13 @@ object ShortestPaths {
   }
 
   /**
-    * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
-    * the current node.  Returns current distance info for current node with updated distance info
-    * for all of its adjacent nodes.
-    *
-    * @param tuple representing (toId, (adjList, (fromId, distance)))
-    * @return Iterable representing updated ((toId, fromId), distance)
-    */
+   * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
+   * the current node.  Returns current distance info for current node with updated distance info
+   * for all of its adjacent nodes.
+   *
+   * @param tuple representing (toId, (adjList, (fromId, distance)))
+   * @return Iterable representing updated ((toId, fromId), distance)
+   */
   def updateDistances(tuple: (String, ((String, Int), Option[Iterable[String]]))):
   Iterable[((String, String), Int)] = {
     tuple match {
@@ -168,7 +168,7 @@ object ShortestPaths {
    * a small diameter would indicate a high degree of connectivity between members (no one person
    * has too many degrees of separation from another).
    *
-   * @param context representing SparkContext
+   * @param context  representing SparkContext
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
    * @return diameter of graph.
    */
