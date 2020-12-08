@@ -11,11 +11,18 @@ object GraphStats {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("GraphConnectedness").setMaster("local[*]")
-    val sc = new SparkContext(conf)
-    val data = sc.textFile(args(0)).map(x => x.split(" "))
+    val conf = new SparkConf()
+      .setAppName("GraphConnectedness")
+      .setMaster("local[*]")
 
-    val graph = data.map(d => (d(0), d(1)))
+    val sc = new SparkContext(conf)
+
+    val data = sc
+      .textFile(args(0))
+      .map(x => x.split(" "))
+
+    val graph = data
+      .map(d => (d(0), d(1)))
       .groupByKey()
       .persist()
 
@@ -26,7 +33,8 @@ object GraphStats {
 
     // implement BFS to traverse all connected users
     for(iteration <- 1 to 4){
-      active = graph.join(active)
+      active = graph
+        .join(active)
         .flatMap({ case (id, (adjList, dummy)) => adjList.map(x => (x, 1))
         })
         .reduceByKey((x,y) => x)
@@ -43,6 +51,7 @@ object GraphStats {
      * continue iterations until path no longer grows
      */
 
-    active.saveAsTextFile("GraphConnectednessOutput")
+    active
+      .saveAsTextFile("GraphConnectednessOutput")
   }
 }
