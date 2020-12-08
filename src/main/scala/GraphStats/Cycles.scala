@@ -1,6 +1,6 @@
 package GraphStats
 
-import utils.GraphRDD.generateGraphRDD
+import utils.GraphRDD.{generateGraphRDD, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -25,9 +25,9 @@ object Cycles {
 
     val sc = new SparkContext(conf)
 
-    // Graph structure:  (userID, List[(friends)])
-    val graph = generateGraphRDD(sc, args(0), " ")
-      .cache()
+//    // Graph structure:  (userID, List[(friends)])
+//    val graph = generateGraphRDD(sc, args(0), " ")
+//      .cache()
 
     val input = sc.textFile(args(0))
 
@@ -69,8 +69,6 @@ object Cycles {
 
     logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
 
-    sc.parallelize(Seq(maxCycleSize))
-      .coalesce(1)
-      .saveAsTextFile(args(1))
+    saveSingleOutput(sc.parallelize(Seq(maxCycleSize)), args(1) + "/cycles")
   }
 }
