@@ -1,5 +1,6 @@
 package GraphStats
 
+import utils.GraphRDD.generateGraphRDD
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -23,6 +24,10 @@ object Cycles {
       .setAppName("Cycles")
 
     val sc = new SparkContext(conf)
+
+    // Graph structure:  (userID, List[(friends)])
+    val graph = generateGraphRDD(sc, args(0), " ")
+      .cache()
 
     val input = sc.textFile(args(0))
 

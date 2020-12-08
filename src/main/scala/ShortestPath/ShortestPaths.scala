@@ -1,6 +1,6 @@
 package ShortestPath
 
-import graph.GraphRDD.{generateGraphRDD, getGexfRDD, getNumEdges, saveGexfSingleOutput, saveSingleOutput}
+import utils.GraphRDD.{generateGraphRDD, getNumEdges}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext, rdd}
