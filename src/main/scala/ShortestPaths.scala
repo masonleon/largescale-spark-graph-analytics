@@ -1,4 +1,4 @@
-import ood.GraphRDD.{generateGraphRDD, getGexfRDD, getNumEdges, saveGexfSingleOutput, saveSingleOutput}
+import graph.GraphRDD.{generateGraphRDD, getGexfRDD, getNumEdges, saveGexfSingleOutput, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
