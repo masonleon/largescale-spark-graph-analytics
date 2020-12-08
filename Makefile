@@ -2,13 +2,13 @@
 
 # Customize these paths for your environment.
 # -----------------------------------------------------------
-spark.root=${SPARK_HOME}
-hadoop.root=${HADOOP_HOME}
+spark.root=/home/matt/opt/spark/spark-2.3.1-bin-without-hadoop/
+hadoop.root=/home/matt/opt/hadoop/hadoop-2.9.1
 project.name=group10-project
-app.name=ShortestPaths
+app.name=Cycles
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
-job.name=ShortestPaths
+job.name=GraphStats.Cycles
 local.master=local[4]
 local.input=input
 local.output=output
@@ -86,6 +86,10 @@ init-hdfs: start-hdfs
 	${hadoop.root}/bin/hdfs dfs -mkdir /user
 	${hadoop.root}/bin/hdfs dfs -mkdir /user/${hdfs.user.name}
 	${hadoop.root}/bin/hdfs dfs -mkdir /user/${hdfs.user.name}/${hdfs.input}
+
+# Load data to HDFS
+upload-input-hdfs: start-hdfs
+	${hadoop.root}/bin/hdfs dfs -put ${local.input}/* /user/${hdfs.user.name}/${hdfs.input}
 
 # Removes hdfs output directory.
 clean-hdfs-output:

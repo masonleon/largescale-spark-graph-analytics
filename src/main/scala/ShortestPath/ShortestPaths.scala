@@ -1,3 +1,5 @@
+package ShortestPath
+
 import graph.GraphRDD.{generateGraphRDD, getGexfRDD, getNumEdges, saveGexfSingleOutput, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
@@ -35,8 +37,8 @@ object ShortestPaths {
     val distances = apspRDD(graph)
     saveSingleOutput(distances, args(1) + "/distances")
 
-//    val gexf = getGexfRDD(sc, graph)
-//    saveGexfSingleOutput(gexf, args(1) + "/gexf")
+    //    val gexf = getGexfRDD(sc, graph)
+    //    saveGexfSingleOutput(gexf, args(1) + "/gexf")
 
   }
 
@@ -72,11 +74,12 @@ object ShortestPaths {
   }
 
   /**
-    * Initialize the path distances structure for a graph.
-    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)])
-    * @param optimize set as true to explicitly use same partitioner for graph and distance structures
-    * @return distances data as RDD[((toId, fromId), distance)]
-    */
+   * Initialize the path distances structure for a graph.
+   *
+   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)])
+   * @param optimize set as true to explicitly use same partitioner for graph and distance structures
+   * @return distances data as RDD[((toId, fromId), distance)]
+   */
   def initializeDistances(GraphRDD: RDD[(String, Iterable[String])], optimize: Boolean) = {
     // Set all distances for "first hop" to 1
     val distances = GraphRDD.flatMap { case (fromId, adjList) =>
@@ -95,15 +98,15 @@ object ShortestPaths {
   }
 
   /**
-    * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
-    * the current node.  Returns current distance info for current node with updated distance info
-    * for all of its adjacent nodes.
-    *
-    * @param tuple representing (toId, (adjList, (fromId, distance)))
-    * @return Iterable representing updated ((toId, fromId), distance)
-    */
+   * Pass the distance from current node on to its adjacent nodes, while keeping the distance from
+   * the current node.  Returns current distance info for current node with updated distance info
+   * for all of its adjacent nodes.
+   *
+   * @param tuple representing (toId, (adjList, (fromId, distance)))
+   * @return Iterable representing updated ((toId, fromId), distance)
+   */
   def updateDistances(tuple: (String, ((String, Int), Option[Iterable[String]]))): Iterable[((String, String), Int)] = {
-      tuple match {
+    tuple match {
       case (toId, ((fromId, distance), Some(adjList))) =>
         adjList.map(newId => ((newId, fromId), edgeWeight + distance)) ++ List(((toId, fromId), distance))
       case (toId, ((fromId, distance), None)) => List(((toId, fromId), distance))
@@ -116,7 +119,7 @@ object ShortestPaths {
    * a small diameter would indicate a high degree of connectivity between members (no one person
    * has too many degrees of separation from another).
    *
-   * @param context representing SparkContext
+   * @param context  representing SparkContext
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
    * @return diameter of graph.
    */

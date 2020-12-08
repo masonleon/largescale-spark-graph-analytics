@@ -1,13 +1,16 @@
-import ShortestPaths.{initializeDistances, saveSingleOutput, updateDistances}
+package ShortestPath
+
 import graph.GraphRDD.generateGraphRDD
+
+import ShortestPath.ShortestPaths.{initializeDistances, saveSingleOutput, updateDistances}
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
 
 object ShortestPathsConvergence {
 
   /**
-    * Weight for each edge connecting vertices in the graph.
-    */
+   * Weight for each edge connecting vertices in the graph.
+   */
   val edgeWeight = 1
   val optimizeJoin = true
 
@@ -19,7 +22,7 @@ object ShortestPathsConvergence {
     }
 
     val conf = new SparkConf()
-      .setAppName("ShortestPaths")
+      .setAppName("ShortestPathsConvergence")
 
     val sc = new SparkContext(conf)
 
@@ -54,6 +57,7 @@ object ShortestPathsConvergence {
     }
 
     logger.info("!*!*!*Number of iterations: " + iterCount.toString)
+
     saveSingleOutput(distances, args(1) + "/convergedDistances")
   }
 }
