@@ -19,17 +19,23 @@ object Cycles {
       System.exit(1)
     }
 
-    val conf = new SparkConf().setAppName("Cycles")
+    val conf = new SparkConf().setAppName("Cycles").setMaster("local")
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
     // "Hops" are the ways to get from a node to another node
     val hops = input
       .map { line =>
-        val nodes = line.split("\t")
+        val nodes = line.split(" ")
         (nodes(0), nodes(1))        // (fromId, toId)
       }
-      .persist()
+      .groupByKey()
+      .map(x => (x._1, x._2.toList))
+      .flatMap {
+        case (key,lst)  => lst.map(index => (key,index))
+      }
+
+    hops.foreach(x => println(x))
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
     var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes

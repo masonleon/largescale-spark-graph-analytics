@@ -25,7 +25,7 @@ aws.bucket.name=groupproject-cycles
 aws.input=input
 aws.output=output
 aws.log.dir=log
-aws.num.nodes=5
+aws.num.nodes=6
 aws.instance.type=m5.xlarge
 
 # Docker Local Execution
