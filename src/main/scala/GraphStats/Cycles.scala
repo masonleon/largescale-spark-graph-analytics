@@ -24,11 +24,12 @@ object Cycles {
     val input = sc.textFile(args(0))
 
     // "Hops" are the ways to get from a node to another node
-    var hops = input
+    val hops = input
       .map { line =>
         val nodes = line.split(" ")
-        (nodes(0), nodes(1)) // (fromId, toId)
+        (nodes(0), nodes(1))        // (fromId, toId)
       }
+      .persist()
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
     var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
@@ -39,14 +40,18 @@ object Cycles {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
-      paths = paths.join(hops)
+      paths =
+        paths.join(hops)
         .filter { case (middleId, ((_, intermediates), _)) => !intermediates.contains(middleId) } // Don't join on a key where you've already been!
         .map { case (middleId, ((fromId, intermediates), toId)) =>
-          (toId, (fromId, intermediates ++ List(middleId)))   // Add join key to list of intermediates
+          if(!intermediates.contains(middleId)){
+            (toId, (fromId, intermediates ++ List(middleId)))   // Add join key to list of intermediates
+          }else{
+            (toId, (fromId, intermediates))
+          }
         }
         .distinct()
 
-      println(paths.foreach(x=>println(x)))
       // Count rows that are cycles
       val cycles = paths.filter { case (toId, (fromId, _)) => fromId.equals(toId) }
         .count()
@@ -61,8 +66,8 @@ object Cycles {
 
 
     logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
-    sc.parallelize(Seq(maxCycleSize))
-      .coalesce(1)
-      .saveAsTextFile(args(1))
+//    sc.parallelize(Seq(maxCycleSize))
+//      .coalesce(1)
+//      .saveAsTextFile(args(1))
   }
 }
