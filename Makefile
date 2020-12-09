@@ -2,14 +2,14 @@
 
 # Customize these paths for your environment.
 # -----------------------------------------------------------
-spark.root=/home/matt/opt/spark/spark-2.3.1-bin-without-hadoop/
-hadoop.root=/home/matt/opt/hadoop/hadoop-2.9.1
+spark.root=${SPARK_HOME}
+hadoop.root=${HADOOP_HOME}
 project.name=group10-project
-app.name=Cycles
+app.name=Stats
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
-job.name=GraphStats.Cycles
-local.master=local[4]
+job.name=experiments.Stats
+local.master=local[*]
 local.input=input
 local.output=output
 local.log=log
@@ -29,7 +29,7 @@ aws.num.nodes=5
 aws.instance.type=m5.xlarge
 
 # Docker Local Execution
-docker.container.name=spark-assp
+docker.container.name=spark-livejournal
 docker.container.base=cs6240
 docker.container.base.img=spark
 
@@ -281,3 +281,7 @@ run-container-spark-jar-local: build-container-spark-jar-local
 rm-xml-jar-docker:
 	rm -rf docker/*.xml
 	rm -rf docker/*.jar
+
+# rename outpart to .gexf
+rename-output-to-gexf:
+	mv output/gexf/part-00000 data/soc-LiveJournal1.gexf
