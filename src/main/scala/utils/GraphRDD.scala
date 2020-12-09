@@ -26,6 +26,42 @@ object GraphRDD {
 //      .cache()
   }
 
+//  def generateNodeRDD(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
+//    context
+//      .textFile(inputFile)
+//      .flatMap(edge => edge.split(" "))
+//      .map{user => user.split(",")(0)}
+//      .map { line =>
+//        (line(0), line(1), line(2))
+//      }
+//      .groupByKey()
+//    //      .cache()
+//  }
+
+  /**
+   * Generate a max filtered graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
+   * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
+   * each edge is record in text file of v1 -> v2.
+   *
+   * @param context representing SparkContext
+   * @param inputFile representing argument for input file
+   * @param separator representing the separator character such as ",", " ", "|", etc.*
+   * @return graph G in adjacency list format as RDD[(V, List[(V)])
+   */
+  def generateMaxFilteredGraphRDD(context: SparkContext, inputFile: String, separator: String, threshold: Int): RDD[(String, Iterable[String])] = {
+    context
+      .textFile(inputFile)
+      .map { line =>
+        val tokens = line.split(separator)
+        (tokens(0), tokens(1))
+      }
+      // maxfilter to reduce datasize input
+      .filter(user => {
+        user._1.toInt <= threshold && user._2.toInt <= threshold
+      })
+      .groupByKey()
+    //      .cache()
+  }
   /**
    * Get number of edges. K = |V|.
    *
