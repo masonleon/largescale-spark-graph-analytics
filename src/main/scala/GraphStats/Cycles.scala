@@ -24,18 +24,11 @@ object Cycles {
     val input = sc.textFile(args(0))
 
     // "Hops" are the ways to get from a node to another node
-    val hops = input
+    var hops = input
       .map { line =>
         val nodes = line.split(" ")
-        (nodes(0), nodes(1))        // (fromId, toId)
+        (nodes(0), nodes(1)) // (fromId, toId)
       }
-      .groupByKey()
-      .map(x => (x._1, x._2.toList))
-      .flatMap {
-        case (key,lst)  => lst.map(index => (key,index))
-      }
-
-    hops.foreach(x => println(x))
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
     var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
@@ -53,6 +46,7 @@ object Cycles {
         }
         .distinct()
 
+      println(paths.foreach(x=>println(x)))
       // Count rows that are cycles
       val cycles = paths.filter { case (toId, (fromId, _)) => fromId.equals(toId) }
         .count()
