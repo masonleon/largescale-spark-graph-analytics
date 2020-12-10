@@ -1,17 +1,17 @@
 package GraphStats
 
-import ShortestPath.ShortestPaths.{apspRDD, saveSingleOutput}
+import ShortestPath.ShortestPaths.apspRDD
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import utils.GraphRDD.generateGraphRDD
+import utils.GraphRDD.{generateGraphRDD, saveSingleOutput}
 
 object Diameter {
   def main(args: Array[String]): Unit = {
 
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger
-    if (args.length != 1) {
-      logger.error("Usage:\nGraphDiameter <input>")
+    if (args.length != 2) {
+      logger.error("Usage:\nGraphDiameter <input dir> <output dir>")
       System.exit(1)
     }
 
@@ -28,7 +28,9 @@ object Diameter {
     val graph = generateGraphRDD(sc, args(0), " ")
       .cache()
 
-    val diameter = getDiameter(sc, graph)
+    val distances = apspRDD(graph)
+
+    val diameter = getDiameter(sc, distances)
 
     saveSingleOutput(diameter, args(1) + "/diameter")
   }
@@ -43,8 +45,8 @@ object Diameter {
    * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
    * @return diameter of graph.
    */
-  def getDiameter(context: SparkContext, GraphRDD: RDD[(String, Iterable[String])]) = {
-    val DistancesRDD = apspRDD(GraphRDD)
+  def getDiameter(context: SparkContext, DistancesRDD: RDD[((String, String), Int)]) = {
+
 
     val diameter = DistancesRDD
       .sortBy(_._2, ascending = false)
