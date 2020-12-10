@@ -5,8 +5,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object Cycles {
   /**
-   * Reads input from .csv file.  Each line of input expected to be in the format "[fromID],
-   * [toID]".  Identifies the largest cycle between users.
+   * Reads input from .tsv file.  Each line of input expected to be in the format "[fromID],
+   * [toID]".  Searches for all cycles with the given k value
    *
    * @param args first argument: input file path, second argument: output file path
    */
@@ -23,7 +23,7 @@ object Cycles {
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
-    val filter = 1000
+    val iterations = 5
 
     // "Hops" are the ways to get from a node to another node
     val hops = input
@@ -31,7 +31,6 @@ object Cycles {
         val nodes = line.split("\t")
         (nodes(0), nodes(1))        // (fromId, toId)
       }
-      .filter(x => x._1.toInt < filter && x._2.toInt < filter)
 
     val rev = hops.map{
       x => (x._2, x._1)
@@ -47,8 +46,9 @@ object Cycles {
     var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
     var pathSize = 1
     var maxCycleSize = 0L
+    var i = 0
 
-    while (!paths.isEmpty()) {
+    for(i <- 1 to iterations) {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
@@ -71,7 +71,6 @@ object Cycles {
       // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
       paths = paths.filter { case (toId, (fromId, _)) => !fromId.equals(toId) }
     }
-
 
     logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
     sc.parallelize(Seq(maxCycleSize))
