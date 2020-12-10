@@ -1,10 +1,7 @@
 package experiments
 
 import org.apache.log4j.LogManager
-import org.apache.spark.sql.catalyst.dsl.expressions.longToLiteral
 import org.apache.spark.{SparkConf, SparkContext}
-import utils.GexfRDD.{getGexfRDD, saveGexfSingleOutput}
-import utils.GraphRDD.{generateGraphRDD, generateMaxFilteredGraphRDD}
 import org.apache.spark.sql.SparkSession
 
 object Stats {
@@ -30,70 +27,77 @@ object Stats {
 
     import spark.implicits._
 
-//    val numTotalEdges = sc
-//      .textFile(args(0))
-//      .count()
-//
-//    sc
-//      .parallelize(List(numTotalEdges))
-//      .coalesce(1)
-//      .saveAsTextFile(args(1) + "/stats/numTotalEdges")
+    // ***** numTotalEdges *************************************************************************
+    val numTotalEdges = sc
+      .textFile(args(0))
+      .count()
 
+    sc
+      .parallelize(List(numTotalEdges))
+      .coalesce(1)
+      .saveAsTextFile(args(1) + "/stats/numTotalEdges")
+    // *********************************************************************************************
+
+    // ***** countsNodeInEdges *********************************************************************
     val countsNodeInEdges = sc
       .textFile(args(0))
       .flatMap(edge => edge.split(" "))
       .map{user => (user.split("\t")(1).toInt, 1)}
       .reduceByKey(_ + _)
       .sortByKey(true)
-
 //      .cache()
 
-//    countsNodeInEdges
-//      .coalesce(1)
-//      .toDF
-//      .write
-//      .csv(args(1) + "/stats/countsNodeInEdges")
-//
-//    val numNodesWithInEdges = countsNodeInEdges
-//      .count()
-//
-//    sc
-//      .parallelize(List(numNodesWithInEdges))
-//      .coalesce(1)
-//      .saveAsTextFile(args(1) + "/stats/numNodesWithInEdges")
+    countsNodeInEdges
+      .coalesce(1)
+      .toDF
+      .write
+      .csv(args(1) + "/stats/countsNodeInEdges")
+    // *********************************************************************************************
 
+    // ***** numNodesWithInEdges *******************************************************************
+    val numNodesWithInEdges = countsNodeInEdges
+      .count()
+
+    sc
+      .parallelize(List(numNodesWithInEdges))
+      .coalesce(1)
+      .saveAsTextFile(args(1) + "/stats/numNodesWithInEdges")
+    // *********************************************************************************************
+
+    // ***** countsNodeOutEdges ********************************************************************
     val countsNodeOutEdges = sc
       .textFile(args(0))
       .flatMap(edge => edge.split(" "))
       .map(user => (user.split("\t")(0).toInt, 1))
       .reduceByKey(_ + _)
       .sortByKey(true)
-
 //      .cache()
 
-//    countsNodeOutEdges
-//      .coalesce(1)
-//      .toDF
-//      .write
-//      .csv(args(1) + "/stats/countsNodeOutEdges")
-//
-//    val numNodesWithOutEdges = countsNodeOutEdges
-//      .count()
-//
-//    sc
-//      .parallelize(List(numNodesWithOutEdges))
-//      .coalesce(1)
-//      .saveAsTextFile(args(1) + "/stats/numNodesWithOutEdges")
+    countsNodeOutEdges
+      .coalesce(1)
+      .toDF
+      .write
+      .csv(args(1) + "/stats/countsNodeOutEdges")
+    // *********************************************************************************************
 
+    // ***** numNodesWithOutEdges ******************************************************************
+        val numNodesWithOutEdges = countsNodeOutEdges
+      .count()
+
+    sc
+      .parallelize(List(numNodesWithOutEdges))
+      .coalesce(1)
+      .saveAsTextFile(args(1) + "/stats/numNodesWithOutEdges")
+    // *********************************************************************************************
+
+    // ***** nodeStatsDF ***************************************************************************
     val NodeInEdgeCountDF = countsNodeInEdges
 //      .coalesce(1)
       .toDF("id", "in_edges_(num_followers)")
 
-
     val NodeOutEdgeCountDF = countsNodeOutEdges
 //      .coalesce(1)
       .toDF("id", "out_edges_(num_following)")
-
 
     val nodeStatsDF = NodeInEdgeCountDF
       .join(
@@ -106,21 +110,12 @@ object Stats {
       .fill(0)
       .sort("id")
 
-//    nodeStatsDF
+    nodeStatsDF
       .coalesce(1)
       .write
-//      .option("header", "true")
+      .option("header", "true")
       .csv(args(1) + "/stats/nodeStatsDf")
-
-    // numTotalNodes
-
-    // numNodesWithOutEdges
-
-    // numNodesWithNoOutEdges
-
-    // missingNode1FromEdgeSequence
-
-    // missingNodesFromAllEdgeSequence
+    // *********************************************************************************************
 
   }
 }
