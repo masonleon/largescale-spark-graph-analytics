@@ -23,7 +23,7 @@ object Cycles {
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
-    val filter = 4000000
+    val filter = 1000
 
     // "Hops" are the ways to get from a node to another node
     val hops = input
@@ -41,6 +41,7 @@ object Cycles {
       .filter(x => x._2._2.nonEmpty)
       .map(node => (node._2._1, node._1))
       .distinct()
+      .cache()
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
     var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
@@ -53,15 +54,11 @@ object Cycles {
       // get all paths of size "pathSize" starting at "from" ending at "to"
       paths =
         paths.join(complete)
-        .filter { case (middleId, ((_, intermediates), _)) => !intermediates.contains(middleId) } // Don't join on a key where you've already been!
-        .map { case (middleId, ((fromId, intermediates), toId)) =>
-          if(!intermediates.contains(middleId)){
+          .filter { case (middleId, ((_, intermediates), _)) => !intermediates.contains(middleId) } // Don't join on a key where you've already been!
+          .map { case (middleId, ((fromId, intermediates), toId)) =>
             (toId, (fromId, intermediates ++ List(middleId)))   // Add join key to list of intermediates
-          }else{
-            (toId, (fromId, intermediates))
           }
-        }
-        .distinct()
+          .distinct()
 
       // Count rows that are cycles
       val cycles = paths.filter { case (toId, (fromId, _)) => fromId.equals(toId) }
