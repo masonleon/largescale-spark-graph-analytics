@@ -48,9 +48,8 @@ object Cycles {
     var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
     var pathSize = 1
     var maxCycleSize = 0L
-    var i = 0
 
-    for(i <- 1 to iterations) {
+    for(_ <- 1 to iterations) {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
