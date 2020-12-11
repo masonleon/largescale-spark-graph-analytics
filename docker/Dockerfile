@@ -1,4 +1,4 @@
-FROM cs6240/spark:latest as spark-assp
+FROM cs6240/spark:latest as spark-livejournal
 
 COPY core-site.xml /hadoop/etc/hadoop/core-site.xml
 COPY hdfs-site.xml /hadoop/etc/hadoop/hdfs-site.xml
