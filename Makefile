@@ -30,7 +30,7 @@ aws.num.nodes=6
 aws.instance.type=m5.xlarge
 
 # Docker Local Execution
-docker.container.name=spark-assp
+docker.container.name=spark-livejournal
 docker.container.base=cs6240
 docker.container.base.img=spark
 
