@@ -28,6 +28,7 @@ object Cycles {
     val iterations = 3
     var pathSize = 1
     var maxCycleSize = 0L
+    var totalCycles = 0L;
 
     // "Hops" are the ways to get from a node to another node
     val hops = input
@@ -56,33 +57,33 @@ object Cycles {
 
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
-    var paths = complete.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
+    var paths = complete.map { case (fromId, toId) => (toId, fromId) }  // List will be intermediate nodes
 
     for(_ <- 1 to iterations) {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
       paths = paths.join(complete)
-          .filter { case (middleId, ((_, intermediates), _)) => !intermediates.contains(middleId) } // Don't join on a key where you've already been!
-          .map { case (middleId, ((fromId, intermediates), toId)) =>
-            (toId, (fromId, intermediates ++ List(middleId)))   // Add join key to list of intermediates
+          .map { case (middleId, (fromId, toId)) => (toId, fromId)
           }
           .distinct()
 
       // Count rows that are cycles
-      val cycles = paths.filter { case (toId, (fromId, _)) => fromId.equals(toId) }
+      val cycles = paths.filter { case (toId, fromId) => fromId.equals(toId) }
         .count()
 
       if (cycles > 0) {
+        totalCycles = cycles
         maxCycleSize = pathSize
       }
 
       // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
-      paths = paths.filter { case (toId, (fromId, _)) => !fromId.equals(toId) }
+      paths = paths.filter { case (toId, fromId) => !fromId.equals(toId) }
     }
 
-    logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!CycleSize: " + maxCycleSize.toString + "\n\n\n")
-    sc.parallelize(Seq(maxCycleSize))
+    logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!CycleSize: " + (totalCycles / (iterations+1)).toString + "\n\n\n")
+    sc.parallelize(Seq("Total Cycles with length " + (iterations + 1) +
+      " is\t" + (totalCycles / (iterations+1)).toString + "\nMax Cycle Size is: " + maxCycleSize.toString))
       .coalesce(1)
       .saveAsTextFile(args(1))
   }
