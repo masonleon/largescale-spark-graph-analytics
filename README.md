@@ -72,4 +72,6 @@ All of the build & execution commands are organized in the Makefile.
 8) Docker Jupyter Scala/Spark Almond Notebook: (https://github.com/almond-sh/almond)
 	```make run-container-spark-jupyter-almond``` -- run docker container with scala + spark kernel for local standalone copy token from terminal and paste in browser http://127.0.0.1:8888/?token=<TOKEN_FROM_TERMINAL>
 9) Docker Standalone Hadoop/Spark
-   ```make run-container-spark-jar-local``` -- run docker container environment with compiled .jar app
+   	```make run-container-spark-jar-local``` -- run docker container environment with compiled .jar app
+    ```make run-container-spark-jar-local 2>&1 | tee logs/logfile.log``` -- run docker container environment with compiled .jar app and redirect standard error+output to log
+
