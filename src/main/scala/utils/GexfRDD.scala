@@ -2,6 +2,8 @@ package utils
 
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
 
 object GexfRDD {
 
@@ -29,14 +31,22 @@ object GexfRDD {
         ">\n" +
       "    " +
           "<nodes>\n" +
-            GraphRDD
-              .map(v =>
-                "     " +
-                  "<node " +
-                  "id=\"" + v._1 + "\" " +
-                  "label=\"" + v._1 + "\" " +
-                  "/>\n"
-              ).collect.mkString +
+//            GraphRDD
+//              .map(v =>
+//                (v._1.toInt,
+//                "     " +
+//                  "<node " +
+//                    "id=\"" + v._1 + "\" " +
+//                    "label=\"" + v._1 + "\" " +
+//                    "in_edges=\"" + v._2 + "\" " +
+//                    "out_edges=\"" + v._3 + "\" " +
+//                  "/>\n"
+//                )
+//              )
+//              .sortByKey(true)
+//              .values
+//              .collect
+//              .mkString +
       "    " +
           "</nodes>\n" +
       "    " +
@@ -44,16 +54,20 @@ object GexfRDD {
             GraphRDD
               .flatMap{ case (v, adjList) =>
                 adjList
-                  .map(
-                    adjId =>
-                      "      " +
-                        "<edge " +
+                  .map(adjId =>
+                    (v.toInt,
+                    "      " +
+                      "<edge " +
                         "source=\"" + v + "\" " +
                         "target=\"" + adjId + "\" " +
-                        //                    "weight=\"" + edgeWeight + "\" " +
-                        "/>\n"
+                      "/>\n"
+                    )
                   )
-              }.collect.mkString +
+              }
+              .sortByKey(true)
+              .values
+              .collect
+              .mkString +
       "    " +
           "</edges>\n" +
       "  " +
