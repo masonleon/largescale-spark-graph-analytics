@@ -79,25 +79,24 @@ object GexfConvert {
 //      .coalesce(1)
       .cache()
 
-//    val graph =
-//      generateGraphRDD(sc, inputFile, separator)
-////    generateMaxFilteredGraphRDD(sc, inputFile, separator, threshold)
-//      .cache()
+    val graph =
+    generateMaxFilteredGraphRDD(sc, inputFile, separator, threshold)
+      .cache()
 
     val xml =
-//      "<?xml " +
-//        "version=\"1.0\" " +
-//        "encoding=\"UTF-8\"" +
-//      "?>\n" +
-//      "<gexf " +
-//        "xmlns=\"http://www.gexf.net/1.2draft\" " +
-//        "version=\"1.2\"" +
-//      ">\n" +
+      "<?xml " +
+        "version=\"1.0\" " +
+        "encoding=\"UTF-8\"" +
+      "?>\n" +
+      "<gexf " +
+        "xmlns=\"http://www.gexf.net/1.2draft\" " +
+        "version=\"1.2\"" +
+      ">\n" +
       "  " +
-//        "<graph " +
-//          "mode=\"static\" " +
-//          "defaultedgetype=\"directed\"" +
-//        ">\n" +
+        "<graph " +
+          "mode=\"static\" " +
+          "defaultedgetype=\"directed\"" +
+        ">\n" +
       "    " +
           "<nodes>\n" +
             nodeStatsDF
@@ -115,27 +114,26 @@ object GexfConvert {
       "    " +
           "</nodes>\n" +
       "    " +
-//        "<edges>\n" +
-//            graph
-//              .flatMap{ case (v, adjList) => adjList
-//                .map(adjId => (v.toInt,
-//      "      " +
-//          "<edge " +
-//            "source=\"" + v + "\" " +
-//            "target=\"" + adjId + "\" " +
-//          "/>\n")
-//                )
-//              }
-//              .sortByKey(true)
-//              .values
-//              .collect
-//              .mkString +
-//      "    " +
-//        "</edges>\n" +
-      "  "
-//    +
-//      "</graph>\n" +
-//      "</gexf>"
+        "<edges>\n" +
+            graph
+              .flatMap{ case (v, adjList) => adjList
+                .map(adjId => (v.toInt,
+      "      " +
+          "<edge " +
+            "source=\"" + v + "\" " +
+            "target=\"" + adjId + "\" " +
+          "/>\n")
+                )
+              }
+              .sortByKey(true)
+              .values
+              .collect
+              .mkString +
+      "    " +
+        "</edges>\n" +
+      "  " +
+      "</graph>\n" +
+      "</gexf>"
 
     sc
       .parallelize(List(xml))
