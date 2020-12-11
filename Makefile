@@ -2,14 +2,13 @@
 
 # Customize these paths for your environment.
 # -----------------------------------------------------------
-spark.root=${SPARK_HOME}
-hadoop.root=${HADOOP_HOME}
+spark.root=/home/matt/opt/spark/spark-2.3.1-bin-without-hadoop/
+hadoop.root=/home/matt/opt/hadoop/hadoop-2.9.1
 project.name=group10-project
-app.name=GexfConvert
+app.name=Cycles
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
-
-job.name=experiments.GexfConvert
+job.name=Graphs.Cycles
 local.master=local[4]
 local.input=input
 local.output=output
@@ -22,7 +21,7 @@ hdfs.output=output
 
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
-aws.bucket.name=livejournalgexf-group10-project
+aws.bucket.name=groupproject-cycles
 aws.input=input
 aws.output=output
 aws.log.dir=log
@@ -30,7 +29,7 @@ aws.num.nodes=6
 aws.instance.type=m5.xlarge
 
 # Docker Local Execution
-docker.container.name=spark-livejournal
+docker.container.name=spark-assp
 docker.container.base=cs6240
 docker.container.base.img=spark
 
@@ -154,8 +153,8 @@ aws: jar upload-app-aws delete-output-aws
 		--name "Group Project: Team 10" \
 		--release-label ${aws.emr.release} \
 		--instance-groups '[{"InstanceCount":${aws.num.nodes},"InstanceGroupType":"CORE","InstanceType":"${aws.instance.type}"},{"InstanceCount":1,"InstanceGroupType":"MASTER","InstanceType":"${aws.instance.type}"}]' \
-	    --configurations file://config.json \
 	    --applications Name=Hadoop Name=Spark \
+	    --configurations file://config.json \
 		--steps Type=CUSTOM_JAR,Name="${app.name}",Jar="command-runner.jar",ActionOnFailure=TERMINATE_CLUSTER,Args=["spark-submit","--deploy-mode","cluster","--class","${job.name}","s3://${aws.bucket.name}/${jar.name}","s3://${aws.bucket.name}/${aws.input}","s3://${aws.bucket.name}/${aws.output}"] \
 		--log-uri s3://${aws.bucket.name}/${aws.log.dir} \
 		--use-default-roles \
@@ -208,7 +207,6 @@ run-container-spark-jupyter-almond:
 # Reformat docker container for local spark deployment entry script.
 entry-container-spark-jar-local:
 	echo "#!/bin/bash \n\nspark-submit --class ${job.name} --master ${local.master} --name \"${app.name}\" ${jar.name} ${local.input} ${local.output}\ncp -a /output/* /result/\n" > docker/local.sh
-	#echo "#!/bin/bash \n\nspark-submit --executor-memory 20G --class ${job.name} --master ${local.master} --name \"${app.name}\" ${jar.name} ${local.input} ${local.output}\ncp -a /output/* /result/\n" > docker/local.sh
 
 # Build base docker image for local spark deployment from cs6240/hadoop and cs6240/spark images.
 build-container-base:
@@ -258,7 +256,3 @@ run-container-spark-jar-local: build-container-spark-jar-local
 rm-xml-jar-docker:
 	rm -rf docker/*.xml
 	rm -rf docker/*.jar
-
-# rename outpart to .gexf
-rename-output-to-gexf:
-	mv output/gexf/part-00000 data/soc-LiveJournal1.gexf
