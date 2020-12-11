@@ -23,8 +23,10 @@ object Cycles {
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
-    val filter = 1000000
-    val iterations = 5
+    val filter = 1000
+    val iterations = 4
+    var pathSize = 1
+    var maxCycleSize = 0L
 
     // "Hops" are the ways to get from a node to another node
     val hops = input
@@ -45,16 +47,13 @@ object Cycles {
       .cache()
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
-    var paths = hops.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
-    var pathSize = 1
-    var maxCycleSize = 0L
+    var paths = complete.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
 
     for(_ <- 1 to iterations) {
       pathSize += 1
 
       // get all paths of size "pathSize" starting at "from" ending at "to"
-      paths =
-        paths.join(complete)
+      paths = paths.join(complete)
           .filter { case (middleId, ((_, intermediates), _)) => !intermediates.contains(middleId) } // Don't join on a key where you've already been!
           .map { case (middleId, ((fromId, intermediates), toId)) =>
             (toId, (fromId, intermediates ++ List(middleId)))   // Add join key to list of intermediates
@@ -73,7 +72,7 @@ object Cycles {
       paths = paths.filter { case (toId, (fromId, _)) => !fromId.equals(toId) }
     }
 
-    logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!MaxCycleSize: " + maxCycleSize.toString + "\n\n\n")
+    logger.info("\n\n\n!*!*!*!*!*!*!*!*!*!**!CycleSize: " + maxCycleSize.toString + "\n\n\n")
     sc.parallelize(Seq(maxCycleSize))
       .coalesce(1)
       .saveAsTextFile(args(1))
