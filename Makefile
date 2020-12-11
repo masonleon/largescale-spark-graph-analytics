@@ -2,13 +2,14 @@
 
 # Customize these paths for your environment.
 # -----------------------------------------------------------
-spark.root=/home/matt/opt/spark/spark-2.3.1-bin-without-hadoop/
-hadoop.root=/home/matt/opt/hadoop/hadoop-2.9.1
+spark.root=${SPARK_HOME}
+hadoop.root=${HADOOP_HOME}
 project.name=group10-project
-app.name=Cycles
+app.name=GexfConvert
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
-job.name=Graphs.Cycles
+
+job.name=experiments.GexfConvert
 local.master=local[4]
 local.input=input
 local.output=output
@@ -21,7 +22,7 @@ hdfs.output=output
 
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
-aws.bucket.name=groupproject-cycles
+aws.bucket.name=livejournalgexf-group10-project
 aws.input=input
 aws.output=output
 aws.log.dir=log
@@ -29,7 +30,7 @@ aws.num.nodes=6
 aws.instance.type=m5.xlarge
 
 # Docker Local Execution
-docker.container.name=spark-assp
+docker.container.name=spark-livejournal
 docker.container.base=cs6240
 docker.container.base.img=spark
 
@@ -207,6 +208,7 @@ run-container-spark-jupyter-almond:
 # Reformat docker container for local spark deployment entry script.
 entry-container-spark-jar-local:
 	echo "#!/bin/bash \n\nspark-submit --class ${job.name} --master ${local.master} --name \"${app.name}\" ${jar.name} ${local.input} ${local.output}\ncp -a /output/* /result/\n" > docker/local.sh
+	#echo "#!/bin/bash \n\nspark-submit --executor-memory 20G --class ${job.name} --master ${local.master} --name \"${app.name}\" ${jar.name} ${local.input} ${local.output}\ncp -a /output/* /result/\n" > docker/local.sh
 
 # Build base docker image for local spark deployment from cs6240/hadoop and cs6240/spark images.
 build-container-base:
@@ -256,3 +258,7 @@ run-container-spark-jar-local: build-container-spark-jar-local
 rm-xml-jar-docker:
 	rm -rf docker/*.xml
 	rm -rf docker/*.jar
+
+# rename outpart to .gexf
+rename-output-to-gexf:
+	mv output/gexf/part-00000 data/soc-LiveJournal1.gexf
