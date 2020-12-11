@@ -1,7 +1,7 @@
 package Graphs
 
 import org.apache.log4j.LogManager
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 
 object Cycles {
   /**
@@ -23,7 +23,7 @@ object Cycles {
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
-    val filter = 1000
+    val filter = 10000
     val iterations = 4
     var pathSize = 1
     var maxCycleSize = 0L
@@ -45,6 +45,14 @@ object Cycles {
       .map(node => (node._2._1, node._1))
       .distinct()
       .cache()
+
+    val graphPartitioner = complete.partitioner match {
+      case Some(p) => p
+      case None => new HashPartitioner(complete.partitions.length)
+    }
+
+    complete.partitionBy(graphPartitioner)
+
 
     // "Paths" are the ways to get to another node from some node, keeping track of nodes passed on the path
     var paths = complete.map { case (fromId, toId) => (toId, (fromId, List[String]())) }  // List will be intermediate nodes
