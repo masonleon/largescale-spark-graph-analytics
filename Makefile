@@ -5,11 +5,11 @@
 spark.root=${SPARK_HOME}
 hadoop.root=${HADOOP_HOME}
 project.name=group10-project
-app.name=GexfConvert
+app.name=Graphs.Cycles
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
 
-job.name=experiments.GexfConvert
+job.name=cycles50000
 local.master=local[4]
 local.input=input
 local.output=output
@@ -22,7 +22,7 @@ hdfs.output=output
 
 # AWS EMR Execution
 aws.emr.release=emr-5.17.0
-aws.bucket.name=livejournalgexf-group10-project
+aws.bucket.name=groupproject-cycles
 aws.input=input
 aws.output=output
 aws.log.dir=log
