@@ -47,7 +47,6 @@ object Diameter {
    */
   def getDiameter(context: SparkContext, DistancesRDD: RDD[((String, String), Int)]) = {
 
-
     val diameter = DistancesRDD
       .sortBy(_._2, ascending = false)
       .take(1)
