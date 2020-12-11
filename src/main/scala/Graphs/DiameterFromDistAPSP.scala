@@ -1,6 +1,6 @@
 package Graphs
 
-import ShortestPath.ShortestPaths.apspRDD
+import ShortestPath.Version1.apspRDD
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
