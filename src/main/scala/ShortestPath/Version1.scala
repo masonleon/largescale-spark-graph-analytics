@@ -5,7 +5,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
 import utils.GraphRDD.{generateGraphRDD, getNumEdges, saveSingleOutput}
 
-object ShortestPathsUsingGraphRDDUtil {
+object Version1 {
 
   /**
    * Weight for each edge connecting vertices in the graph.
