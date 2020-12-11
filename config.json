@@ -1,0 +1,15 @@
+[
+  {
+    "Classification": "yarn-site",
+    "Properties": {
+      "yarn.scheduler.maximum-allocation-mb": "16000",
+      "yarn.nodemanager.resource.memory-mb": "16000"
+    }
+  },
+  {
+    "Classification": "spark",
+    "Properties": {
+      "maximizeResourceAllocation": "true"
+    }
+  }
+]
