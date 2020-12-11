@@ -6,7 +6,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import utils.GraphRDD.{generateGraphRDD, saveSingleOutput}
 
-object Diameter {
+object DiameterFromDistAPSP {
   def main(args: Array[String]): Unit = {
 
     val logger: org.apache.log4j.Logger = LogManager.getRootLogger

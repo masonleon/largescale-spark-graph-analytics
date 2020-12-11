@@ -1,11 +1,11 @@
 package ShortestPath
 
-import utils.GraphRDD.{generateGraphRDD, getNumEdges, saveSingleOutput}
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{HashPartitioner, SparkConf, SparkContext, rdd}
+import org.apache.spark.{HashPartitioner, SparkConf, SparkContext}
+import utils.GraphRDD.{generateGraphRDD, getNumEdges, saveSingleOutput}
 
-object ShortestPaths {
+object ShortestPathsUsingGraphRDDUtil {
 
   /**
    * Weight for each edge connecting vertices in the graph.
