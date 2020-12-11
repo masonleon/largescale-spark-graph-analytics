@@ -26,18 +26,6 @@ object GraphRDD {
 //      .cache()
   }
 
-//  def generateNodeRDD(context: SparkContext, inputFile: String, separator: String): RDD[(String, Iterable[String])] = {
-//    context
-//      .textFile(inputFile)
-//      .flatMap(edge => edge.split(" "))
-//      .map{user => user.split(",")(0)}
-//      .map { line =>
-//        (line(0), line(1), line(2))
-//      }
-//      .groupByKey()
-//    //      .cache()
-//  }
-
   /**
    * Generate a max filtered graph G of pair (V, E) in adjacency list format as RDD, where V is set of vertices and E is
    * set of edges, such that E ⊆ V x V. Graph generated from input text file representing |E| where
@@ -62,6 +50,7 @@ object GraphRDD {
       .groupByKey()
     //      .cache()
   }
+
   /**
    * Get number of edges. K = |V|.
    *
@@ -74,17 +63,6 @@ object GraphRDD {
       .toInt
   }
 
-//  /**
-//   * Helper function to save output in coalesced single text file.
-//   *
-//   * @param GraphRDD representing graph G in adjacency list format as RDD[(V, List[(V)]).
-//   * @param outputFile representing string output file dir.
-//   */
-//  def saveSingleOutput(GraphRDD: RDD[(String, (String, Int))], outputFile: String) = {
-//    GraphRDD
-//      .coalesce(1)
-//      .saveAsTextFile(outputFile)
-//  }
   /**
    * Helper function to save output in coalesced single text file.
    *

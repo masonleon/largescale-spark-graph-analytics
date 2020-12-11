@@ -5,10 +5,10 @@
 spark.root=${SPARK_HOME}
 hadoop.root=${HADOOP_HOME}
 project.name=group10-project
-app.name=Stats
+app.name=Cycles
 jar.name=${project.name}.jar
 maven.jar.name=${project.name}-1.0.jar
-job.name=experiments.Stats
+job.name=GraphStats.Cycles
 local.master=local[*]
 local.input=input
 local.output=output
