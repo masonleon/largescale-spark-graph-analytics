@@ -23,7 +23,7 @@ object Cycles {
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
-    val filter = 50000
+    val filter = 10000
     // path length starts at 1, so desired cycle length is iterations + 1
     val iterations = 3
     var pathSize = 1

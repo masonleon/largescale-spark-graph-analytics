@@ -1,9 +1,10 @@
 # Makefile for Group10 Spark project.
 
 # Customize these paths for your environment.
+# Specifically customize spark.root | hadoop.root | and job.name
 # -----------------------------------------------------------
-spark.root=/home/matt/opt/spark/spark-2.3.1-bin-without-hadoop/
-hadoop.root=/home/matt/opt/hadoop/hadoop-2.9.1
+spark.root=${SPARK_HOME}
+hadoop.root=${HADOOP_HOME}
 project.name=group10-project
 app.name=Cycles
 jar.name=${project.name}.jar
