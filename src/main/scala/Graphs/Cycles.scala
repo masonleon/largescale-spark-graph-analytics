@@ -1,4 +1,4 @@
-package GraphStats
+package Graphs
 
 import org.apache.log4j.LogManager
 import org.apache.spark.{SparkConf, SparkContext}
@@ -23,6 +23,7 @@ object Cycles {
     val sc = new SparkContext(conf)
     val input = sc.textFile(args(0))
 
+    val filter = 1000000
     val iterations = 5
 
     // "Hops" are the ways to get from a node to another node
@@ -31,6 +32,7 @@ object Cycles {
         val nodes = line.split("\t")
         (nodes(0), nodes(1))        // (fromId, toId)
       }
+      .filter(x => x._1.toInt < filter && x._2.toInt < filter)
 
     val rev = hops.map{
       x => (x._2, x._1)

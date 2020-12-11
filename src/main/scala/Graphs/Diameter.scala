@@ -1,4 +1,4 @@
-package GraphStats
+package Graphs
 
 import org.apache.log4j.LogManager
 import org.apache.spark.rdd.RDD
