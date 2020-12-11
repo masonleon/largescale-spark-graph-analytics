@@ -24,7 +24,8 @@ object Cycles {
     val input = sc.textFile(args(0))
 
     val filter = 10000
-    val iterations = 4
+    // cycle length starts at 1, so desired cycle length is iterations + 1
+    val iterations = 3
     var pathSize = 1
     var maxCycleSize = 0L
 
