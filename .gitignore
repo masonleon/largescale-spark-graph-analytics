@@ -30,3 +30,5 @@ target/
 notebooks/spark-warehouse/
 
 input/soc-LiveJournal1.txt
+*.txt
+

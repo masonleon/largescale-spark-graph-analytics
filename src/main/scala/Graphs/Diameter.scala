@@ -1,4 +1,4 @@
-package GraphStats
+package Graphs
 
 import ShortestPath.ShortestPaths.apspRDD
 import org.apache.log4j.LogManager
