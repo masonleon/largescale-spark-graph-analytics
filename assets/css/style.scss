@@ -1,0 +1,24 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+.logos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    list-style-type: none;
+    align-items: center;
+}
+
+.logo-wrapper {
+    flex: 0 0 50%;
+}
+
+.logo-wrapper img {
+    width: 130px;
+    height: 75px;
+    padding-top: 10px;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+}
