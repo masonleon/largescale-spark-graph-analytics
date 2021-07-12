@@ -2,6 +2,8 @@
 
 Fall 2020
 
+Visit https://masonleon.github.io/largescale-spark-graph-analytics/ for additional project information.
+
 Code author
 -----------
 April Gustafson, Mason Leon, Matthew Sobkowski
