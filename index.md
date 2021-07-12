@@ -5,7 +5,6 @@
 layout: default
 ---
 
-
 # Fall 2020 - CS 6240 - Term Group Project - Team 10
 
 CS 6240: Large-Scale Parallel Data Processing   
@@ -18,6 +17,30 @@ Northeastern University
 * April Gustafson
 * Mason Leon
 * Matthew Sobkowski
+
+This site is a GitHub Pages version of our final project, report, and presentation.
+
+**Materials:**
+* [GitHub Repository](https://github.com/masonleon/largescale-spark-graph-analytics)
+* [12/11/2020 Project Submission Release](https://github.com/masonleon/largescale-spark-graph-analytics/releases/tag/v1.0)
+* [PDF Final Report Submission](./files/CS6240Fall2020ProjectTeam10_GustafsonLeonSobkowski-report.pdf)
+* [PDF Presentation Slide Deck](./files/CS6240Fall2020ProjectTeam10_GustafsonLeonSobkowski-slides.pdf)
+
+**Presentation:**
+<video controls width='100%'>
+  <source src='files/CS6240Fall2020ProjectTeam10_GustafsonLeonSobkowski-presentation.mp4'
+          type='video/mp4'>
+  <p>
+    Your browser doesn't support HTML5 video. Here is a
+    <a href='files/CS6240Fall2020ProjectTeam10_GustafsonLeonSobkowski-presentation.mp4'>
+      link to the video
+    </a>
+    instead.
+  </p>
+</video>
+<br>
+<br>
+
 
 ## Project Overview
 
@@ -512,26 +535,261 @@ These data structures must have the same key type and the partitioner may need t
 
 ### Overview
 
+The goal of this task is to find the diameter and largest cycle of a social network graph.
+The diameter is defined as the longest path in the set of all-pairs shortest paths in the graph and is a common measure of network size.
+In a social network graph, a small diameter would indicate a high degree of connectivity between members (no one person has too many degrees of separation from another).
+
+In addition, the largest cycle of the graph is the longest directed trail in which the only repeated vertices are the first and last vertices.
+Specifically, information changes can be observed when travelling from source user through the cycle, and ultimately back to the initial sender.
+In a more finely-grained scenario, cycles could be used to predict the evolution of a signed social network graph, where the signed aspect is either a positive or negative resemblance between two users.
+
+
 ### Pseudo-Code
 
-#### Diameter (found in APSP files)
+[Graphs Scala Code](https://github.com/masonleon/largescale-spark-graph-analytics/blob/master/src/main/scala/Graphs)
+
+
+#### Diameter
+
+[Diameter Scala Code within APSP files](https://github.com/masonleon/largescale-spark-graph-analytics/tree/master/src/main/scala/ShortestPath)
+[Diameter Scala Code (as Top K) helper](https://github.com/masonleon/largescale-spark-graph-analytics/blob/master/src/main/scala/Graphs/DiameterFromDistAPSP.scala)
+
+Since we already generated a dataset for all-pairs shortest paths in the LiveJournal network, finding the network diameter is a relatively straight forward top-K problem.
+We can read in the APSP dataset and find the top distance for all of the shortest-paths that we identified.
+
+```scala
+// Line of input: (toId, fromId, distance)
+val shortestPaths = sc.textFile(input shortest paths file)
+  .map(
+    line => ((toId, fromId), distance)
+  )
+
+val diameter = shortestPaths.values.max
+```
+
+Alternatively, we can compute the diameter while running APSP.
+Since the diameter will equal the number of iterations performed to compute APSP, we instantiate a counter before starting iterations and increment it at the end of every iteration and save the accumulator value as the diameter output.
+
 
 #### Cycles of Length n
 
+[Cycles Scala Code](https://github.com/masonleon/largescale-spark-graph-analytics/blob/master/src/main/scala/Graphs/Cycles.scala)
+
+```scala
+// "Hops" are the ways to get from a node to another node
+val hops = input
+  .map {
+    line => 
+      val nodes = line.split("\t")
+      // (fromId, toId)
+      (nodes(0), nodes(1))
+  }
+  .filter(
+    x => x._1.toInt < filter && x._2.toInt < filter
+  )
+
+val rev = hops
+  .map{
+    x => (x._2, x._1)
+  }
+
+// only keep “complete” edges, or in other words, 
+// edges with nodes that have outgoing edges
+val complete = rev
+  .leftOuterJoin(hops)
+  .filter(
+    x => x._2._2.nonEmpty
+  )
+  .map(
+    node => (node._2._1, node._1)
+  )
+  .distinct()
+  .cache()
+
+// use custom partitioner
+val graphPartitioner = complete.partitioner match {
+  case Some(p) => p
+  case None => new HashPartitioner(complete.partitions.length)
+}
+complete.partitionBy(graphPartitioner)
+
+var paths = complete
+  .map { 
+    case (fromId, toId) => (toId, fromId)
+  }
+  .partitionBy(graphPartitioner)
+
+// List will be intermediate nodes
+for(_ <- 1 to iterations) {
+  pathSize += 1
+
+  // Get all paths of size "pathSize" starting at "from" ending at "to"
+  paths = paths.join(complete)
+     .map { 
+       case (middleId, (fromId, toId)) => (toId, fromId)
+      }
+      .distinct()
+
+  // Count rows that are cycles
+  val cycles = paths
+    .filter { 
+      case (toId, fromId) => fromId.equals(toId) 
+    }
+    .count()
+
+  // Only keep rows that are NOT cycles (to avoid endlessly going in circles)
+  if (cycles > 0) {
+    totalCycles = cycles
+    maxCycleSize = pathSize
+  }
+  paths = paths
+    .filter { 
+      case (toId, fromId) => !fromId.equals(toId) 
+    }
+}
+```
+
+
 ### Algorithm and Program Analysis
+
+#### Diameter
+
+We could keep track of diameter as max distance in every iteration of the APSP.
+This would require a lookup to a global counter for every key in every iteration of APSP.
+We believe that it would be more efficient to identify the diameter at the end of APSP with a single pass through the dataset.
+
+
+#### Cycles of length n
+
+We decided to move off from the longest cycle problem because due to testing and research, many algorithms are of V<sup>3</sup> time, where V is the number of vertices.
+Our initial implementation had us tracking intermediate nodes as well, and although we filtered the data to a small amount of edges, the intermediate data would grow exponentially, leading us into memory errors on AWS, even if tinkering with memory limits.
+
+Therefore, we decided to move on to a more generic problem, where the cycle length could be specified.
+This allowed us to not have to keep track of intermediates for each node, and thus, instead of limiting our data, we gave ourselves the opportunity to explore larger filter numbers, and specify more attainable cycle ranges.
+
+The algorithm itself is similar to triangles, with the key difference being instead of a static data → path2 → triangle threshold, we loop the paths for a specified number of iterations before finding the closing edge.
+These iterations are specified in the program itself.
+Further optimizations were made such as a custom partitioner, as well as not only filtering on ID’s, but also on nodes with no outgoing edges.
+When comparing the original data to the filtered (with no max filter), we were able to remove around 2 million edges from the original dataset.
+Factoring in the size of join intermediate data, we found this to be a significant improvement.
 
 ### Experiments
 
 #### Cycles, cluster size constant (6 workers + 1 master), varying max-filter
 
+| MaxFilter  | Runtime  |
+|:---------- |:-------- |
+| 20,000     | 3 min    |
+| 30,000     | 8 min    |
+| 50,000     | 32 min   |
+
+
 #### Cycles, simple filter size constant (filter = 30,000), varying cluster size
+
+| Cluster Size                         | Runtime  |
+|:------------------------------------ |:-------- |
+| Small cluster (4 workers + 1 master) | 12 min   |
+| Large cluster (6 workers + 1 master) | 8 min    |
+
 
 ### Results Sample
 
 #### Diameter
 
+[AWS EMR Logs](https://github.com/masonleon/largescale-spark-graph-analytics/blob/37a47bfdc2e67534a792c79c8a58fe33a385885a/results)
+
+<table>
+  <th>
+    Input
+  </th>
+  <th>
+    Output
+  </th>
+  <tr>
+    <td>
+      <b>(toUser, (fromUser, shortestDistance))</b>
+      <br>
+      (1,(0,1))
+      <br>
+      (2,(0,1))
+      <br>
+      (2,(1,1))
+      <br>
+      (3,(0,2))
+      <br>
+      (3,(1,1))
+      <br>
+      (3,(2,1))
+    </td>
+    <td>
+      2
+    </td>
+  </tr>
+</table>
+
+
 #### Cycles
+
+[AWS EMR Logs](https://github.com/masonleon/largescale-spark-graph-analytics/blob/37a47bfdc2e67534a792c79c8a58fe33a385885a/results/cycleOutput)
+
+<table>
+  <th>
+    Input
+  </th>
+  <th>
+    Output
+  </th>
+  <tr>
+    <td>
+      <b>(fromUser  toUser)</b>
+      <br>
+      (1  2)
+    </td>
+    <td>
+      Total Cycles with Length 4 is: 0
+      <br>
+      Max Cycle size is: 0
+    </td>
+  </tr>
+</table>
+
 
 ## Graph Visualization
 
+As an interesting experiment to better understand the graph, we utilized several methods developed throughout the project for processing the data into graph RDD and node edge count Data Frame representation.
+
+Using Spark, we serialized the graph to a standard XML-like format called ​[Graph Exchange XML Format (GEXF)](https://gephi.org/gexf/format/) ​for representing graphs.
+We then used graph visualization and network analysis tool [​Gephi​](https://gephi.org/) to generate visual forms of the LiveJournal network from our ​[GEXF file](https://github.com/masonleon/largescale-spark-graph-analytics/blob/37a47bfdc2e67534a792c79c8a58fe33a385885a/data/gephi/soc-LiveJournal1_Filtered10000.gexf)​.
+
+[Scala Spark GEXF Conversion Code](https://github.com/masonleon/largescale-spark-graph-analytics/blob/37a47bfdc2e67534a792c79c8a58fe33a385885a/src/main/scala/utils/GexfRDD.scala)
+
+[The produced images may be found in the group repo](https://github.com/masonleon/largescale-spark-graph-analytics/blob/37a47bfdc2e67534a792c79c8a58fe33a385885a/data/gephi)
+
+dataset filtered to 10,000 nodes, grouped into clusters 
+![10k_livejournal](./data/gephi/10k_livejournal.png)
+
+dataset filtered to 10,000 nodes, node size/color encoded to represent nodes with greatest in-degree
+![10k_livejournal](./data/gephi/10k_livejournal_in_degree_color.png)
+
+dataset filtered to 10,000 nodes, node size encoded to represent nodes with greatest in-edge counts
+![10k_livejournal](./data/gephi/10k_livejournal_in_edge_counts.png)
+
+dataset filtered to 10,000 nodes, node size encoded to represent nodes with greatest out-edge counts
+![10k_livejournal](./data/gephi/10k_livejournal_out_edge_counts.png)
+
+dataset filtered to 10,000 nodes, node size encoded to represent nodes with incoming node connections
+![10k_livejournal](./data/gephi/10k_livejournal_in_node_size.png)
+
+dataset filtered to 10,000 nodes, node size encoded to represent nodes with the greatest degree
+![10k_livejournal](./data/gephi/10k_livejournal_total_degree.png)
+
+
 ## Conclusion
+
+Implementing parallel graph algorithms and producing analysis on a real-world dataset provided us with better context and understanding for the concepts explored throughout the semester.
+Just like in industry, we were constrained by cost, time, and resources and therefore needed to evaluate how to plan a creative and iterative approach to processing large graph data sets to generate useful insight.
+
+In the All-Pairs Shortest Path exploration, our biggest takeaway was that co-partitioning datasets does improve speedup.
+For the cycles exploration, we learned how to manage memory constraints and the importance of fine tuning job parameters.
+Overall, working through the limitations of our program forced us to understand more about what’s happening “under the hood” in Spark when processing big data.
+

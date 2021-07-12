@@ -17,9 +17,8 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-
+#
 title: Large-Scale Spark Graph Analytics
-# email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
   Group 10 Project, 
   Fall 2020, 
@@ -29,15 +28,14 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: "/largescale-spark-graph-analytics" # the subpath of your site, e.g. /blog
 url: "https://masonleon.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 domain: masonleon.github.io
-# twitter_username: jekyllrb
-# github_username:  jekyll
-
+github_username:  masonleon
 logo: /data/gephi/10k_livejournal.png
+# show_downloads: true
 # Build settings
 theme: jekyll-theme-minimal
-# plugins:
-#   - jekyll-feed
-
+plugins:
+  - 
+#
 # Exclude from processing.
 # The following items will not be processed, by default.
 # Any item listed under the `exclude:` key here will be automatically added to
@@ -45,7 +43,7 @@ theme: jekyll-theme-minimal
 #
 # Excluded items can be processed by explicitly listing the directories or
 # their entries' file path in the `include:` list.
-
+#
 exclude:
   - .sass-cache/
   - .jekyll-cache/
